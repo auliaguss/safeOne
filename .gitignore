@@ -1,0 +1,44 @@
+//
+//  .gitignore
+//  PhotosRecreate
+//
+//  Created by Aulia Agus on 17/04/26.
+//
+
+# macOS
+.DS_Store
+
+# Xcode build files
+build/
+DerivedData/
+
+# User-specific data (MUST ignore)
+xcuserdata/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+
+# CocoaPods (if you ever use it)
+Pods/
+
+# Carthage (if used)
+Carthage/Build/
+
+# Fastlane (optional)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+
+# Archives
+*.xcarchive
+
+# Temporary files
+*.swp
+*.lock
+
+# Logs
+*.log
