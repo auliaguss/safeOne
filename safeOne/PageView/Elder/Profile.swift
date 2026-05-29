@@ -29,19 +29,18 @@ struct Profile: View {
                     // Avatar Placeholder blue circle
                     ZStack {
                         Circle()
-                            .fill(Color(hex: ""))
-                            .frame(width: 64, height: 64)
+                            .fill(Color(.systemGray4))
+                            .frame(width: 50, height: 50)
                         Text("👵🏻") // Represent visual Memoji Sukarni
                             .font(.system(size: 40))
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Sukarni")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundColor(.black)
+                            .font(.headline)
                         Text("Elder")
-                            .font(.system(size: 14, weight: .regular, design: .rounded))
-                            .foregroundColor(.gray)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
                     Spacer()
                 }
