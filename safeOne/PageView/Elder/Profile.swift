@@ -16,6 +16,7 @@ struct Profile: View {
     let soundOptions = ["Default", "Loud Alert", "Soft Chime", "None"]
     
     var body: some View {
+        NavigationStack {
         ScrollView {
             VStack(spacing: 20) {
                 
@@ -139,12 +140,29 @@ struct Profile: View {
                     .cornerRadius(20)
                 }
                 .padding(.horizontal, 24)
-                .padding(.bottom, 100) //
-                
+
+                // LOGOUT BUTTON
+                Button {
+                    goToOnboarding = true
+                } label: {
+                    Text("Logout")
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.red)
+                        .cornerRadius(16)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 100)
+
             }
-            
+
         }
         .background(Color(hex: "F2F2F7").ignoresSafeArea())
+        .navigationDestination(isPresented: $goToOnboarding) {
+            Onboarding()
+        }
+        } // NavigationStack
     }
 }
 
