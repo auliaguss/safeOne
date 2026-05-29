@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct Onboarding: View {
+    var onComplete: (UserRole) -> Void = { _ in }
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -96,7 +98,7 @@ struct Onboarding: View {
                     .fontWeight(.semibold)
                 
                 Button {
-
+                    onComplete(.elder)
                 } label: {
                     Text("Elder")
                         .foregroundColor(.white)
@@ -105,9 +107,9 @@ struct Onboarding: View {
                         .background(Color.blue)
                         .clipShape(Capsule())
                 }
-                
-                Button {
 
+                Button {
+                    onComplete(.children)
                 } label: {
                     Text("Children/Caregiver")
                         .foregroundColor(.white)

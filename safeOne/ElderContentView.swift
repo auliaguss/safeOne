@@ -1,23 +1,15 @@
 //
-//  ContentView.swift
+//  ElderContentView.swift
 //  safeOne
-//
-//
-//  Created by Aulia Agus on 20/05/26.
 //
 
 import SwiftUI
 
-struct ContentView: View {
-    @EnvironmentObject var appState: AppState
-
+struct ElderContentView: View {
     var body: some View {
         TabView {
             Tab("Dashboard", systemImage: "checklist") {
-                DashboardView()
-            }
-            Tab("Reminder", systemImage: "bell") {
-                ReminderListView()
+                ElderDashboard()
             }
             Tab("Profile", systemImage: "person") {
                 ProfileView()
@@ -27,6 +19,6 @@ struct ContentView: View {
     }
 }
 #Preview {
-    ContentView()
+    ElderContentView()
         .environmentObject(AppState())
 }
