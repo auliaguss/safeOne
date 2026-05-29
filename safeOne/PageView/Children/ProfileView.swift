@@ -13,9 +13,10 @@ struct ProfileView: View {
     @EnvironmentObject var appState: AppState
     @State private var hapticsEnabled: Bool = true
     @State private var textToSpeechEnabled: Bool = true
+    @State private var goToOnboarding = false
     @State private var soundsDefault: String = "Default"
     @State private var alertsValue: String = "Elders missed 1 reminder"
-
+    
     var body: some View {
         NavigationStack {
             List {
@@ -40,7 +41,7 @@ struct ProfileView: View {
                     }
                     .padding(.vertical, 4)
                 }
-
+                
                 // Account
                 Section("Account") {
                     NavigationLink("Elder Lists") {
@@ -51,7 +52,7 @@ struct ProfileView: View {
                             .navigationTitle("Connected Devices")
                     }
                 }
-
+                
                 // Notification
                 Section("Notification") {
                     HStack {
@@ -63,10 +64,10 @@ struct ProfileView: View {
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
-
+                    
                     Toggle("Haptics", isOn: $hapticsEnabled)
                     Toggle("Text To Speech", isOn: $textToSpeechEnabled)
-
+                    
                     HStack {
                         Text("Alerts")
                         Spacer()
@@ -78,7 +79,7 @@ struct ProfileView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-
+                
                 // General
                 Section("General") {
                     NavigationLink("Emergency Services") {
@@ -89,8 +90,24 @@ struct ProfileView: View {
                         Text("Data & Privacy")
                             .navigationTitle("Data & Privacy")
                     }
+                    
                 }
+                Button {
+                    goToOnboarding = true
+                } label: {
+                    Text("Logout")
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.red)
+                        .cornerRadius(16)
+                }
+                .padding()
             }
+            .navigationDestination(isPresented: $goToOnboarding) {
+                Onboarding()
+            }
+            
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -103,7 +120,7 @@ struct ElderListView: View {
     @EnvironmentObject var appState: AppState
     @State private var showAddElder = false
     @State private var newElderName = ""
-
+    
     var body: some View {
         List {
             ForEach(appState.elders) { elder in

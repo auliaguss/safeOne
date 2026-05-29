@@ -11,6 +11,7 @@ struct Profile: View {
     @State private var selectedSound = "Default"
     @State private var isHapticsEnabled = true
     @State private var isTextToSpeechEnabled = true
+    @State private var goToOnboarding = false
     
     let soundOptions = ["Default", "Loud Alert", "Soft Chime", "None"]
     
@@ -139,7 +140,9 @@ struct Profile: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 100) //
+                
             }
+            
         }
         .background(Color(hex: "F2F2F7").ignoresSafeArea())
     }

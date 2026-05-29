@@ -121,6 +121,7 @@ struct Onboarding: View {
                 }
             }
         }
+        .navigationBarBackButtonHidden(true)
     }
 }
 
