@@ -23,7 +23,7 @@ struct AddReminderView: View {
     @State private var showTimePicker = false
 
     let emojiOptions: [String] = ["💊", "🩺", "🏃", "🍎", "💉", "🩹", "🧘", "🚶"]
-
+ 
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -220,4 +220,9 @@ struct FormPickerRowDisplay: View {
         .padding(.horizontal)
         .padding(.vertical, 14)
     }
+}
+
+#Preview {
+    AddReminderView()
+        .environmentObject(AppState())
 }
