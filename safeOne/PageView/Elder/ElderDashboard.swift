@@ -118,7 +118,7 @@ struct ElderDashboard: View {
                             
                         case .profile:
                             // connect to file Profile() already brought in this folder PageView
-                            Profile()
+                            ElderProfileView()
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -14,7 +14,7 @@ struct ElderContentView: View {
                 ElderDashboard()
             }
             Tab("Profile", systemImage: "person") {
-                Profile()
+                ElderProfileView()
             }
         }
         .accentColor(.blue)
