@@ -13,5 +13,6 @@ struct ReminderItem: Identifiable {
     let instruction: String
     let time: String
     let statusText: String
+    let imageLink: String?
     let imageName: String //using systemName SF Symbols
 }
