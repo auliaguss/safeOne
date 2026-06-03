@@ -1,21 +1,12 @@
-//
-//  ReminderListView.swift
-//  ElderCareApp
-//
-//  Created by Hercio Venceslau Silla on 28/05/26.
-//
-
 import SwiftUI
 
 struct ReminderListView: View {
     @EnvironmentObject var appState: AppState
     @State private var showAddReminder = false
-    @State private var showPastReminders = false
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Nav bar
                 HStack {
                     Text("Reminder")
                         .font(.headline)
@@ -34,60 +25,58 @@ struct ReminderListView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 12)
 
-                // Elder Selector
                 ElderSelectorView()
                     .padding(.horizontal)
                     .padding(.bottom, 12)
 
                 Divider()
 
-                ScrollView {
-                    VStack(spacing: 0) {
-                        let active = appState.reminders.filter { !$0.isPast }
-
-                        ForEach(active) { reminder in
-                            NavigationLink(destination: ReminderDetailView(reminder: reminder)) {
-                                ReminderListRow(reminder: reminder)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            Divider()
-                                .padding(.leading, 72)
+                List {
+                    ForEach(currentReminders) { reminder in
+                        NavigationLink(destination: ReminderDetailView(reminder: reminder)) {
+                            ReminderListRow(reminder: reminder)
                         }
-
-                        // Past Reminders toggle
-                        Button(action: { showPastReminders.toggle() }) {
-                            HStack(spacing: 4) {
-                                Text("See Past Reminders")
-                                    .font(.subheadline)
-                                    .foregroundColor(.orange)
-                                Image(systemName: showPastReminders ? "chevron.up" : "chevron.down")
-                                    .font(.caption)
-                                    .foregroundColor(.orange)
-                            }
-                            .padding(.horizontal)
-                            .padding(.vertical, 14)
-                        }
-
-                        if showPastReminders {
-                            let past = appState.reminders.filter { $0.isPast }
-                            ForEach(past) { reminder in
-                                ReminderListRow(reminder: reminder, isPast: true)
-                                Divider()
-                                    .padding(.leading, 72)
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                Task {
+                                    await appState.deleteReminders(ids: [reminder.id])
+                                }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
                             }
                         }
                     }
+
+                    if currentReminders.isEmpty {
+                        Text("No reminders for this elder.")
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .listRowSeparator(.hidden)
+                    }
                 }
+                .listStyle(.plain)
             }
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showAddReminder) {
                 AddReminderView()
             }
+            .task {
+                await appState.loadReminders(userID: appState.selectedElder?.id)
+            }
+            .onChange(of: appState.selectedElderIndex) {
+                Task {
+                    await appState.loadReminders(userID: appState.selectedElder?.id)
+                }
+            }
+        }
+    }
+
+    private var currentReminders: [Reminder] {
+        appState.reminders.filter {
+            !$0.isPast && $0.elderID == appState.selectedElder?.id
         }
     }
 }
-
-// MARK: - Reminder List Row
 
 struct ReminderListRow: View {
     let reminder: Reminder
@@ -109,14 +98,8 @@ struct ReminderListRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isPast ? Color(.systemGray5) : Color(.systemGray6))
-                    .frame(width: 48, height: 48)
-                Text(reminder.imageName ?? "💊")
-                    .font(.title3)
-                    .opacity(isPast ? 0.5 : 1.0)
-            }
+            ReminderImageView(imageName: reminder.imageName)
+                .opacity(isPast ? 0.5 : 1.0)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(reminder.title)

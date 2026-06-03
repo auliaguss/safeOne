@@ -1,57 +1,68 @@
-//
-//  DashboardView.swift
-//  ElderCareApp
-//
-//  Created by Hercio Venceslau Silla on 28/05/26.
-//
-
 import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
+    @State private var selectedDate = Date()
+    @State private var isShowingCalendar = false
+
+    private var isShowingToday: Bool {
+        Calendar.current.isDateInToday(selectedDate)
+    }
 
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 0) {
-
-                // Header
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Daily Check-In")
                             .font(.title2)
                             .fontWeight(.bold)
-                        Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).year()))
+                        Text(selectedDate.formatted(.dateTime.weekday(.wide).day().month(.wide).year()))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Button(action: {}) {
+                    Button(action: { isShowingCalendar.toggle() }) {
                         Image(systemName: "calendar")
                             .font(.title3)
-                            .foregroundColor(.primary)
+                            .foregroundColor(isShowingCalendar ? .blue : .primary)
                     }
                 }
                 .padding(.horizontal)
                 .padding(.top, 16)
                 .padding(.bottom, 12)
 
-                // Elder Selector
+                if isShowingCalendar {
+                    DatePicker(
+                        "Date",
+                        selection: $selectedDate,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.graphical)
+                    .padding(.horizontal)
+                    .onChange(of: selectedDate) {
+                        isShowingCalendar = false
+                        Task {
+                            await appState.loadDashboardReminders(for: selectedDate)
+                        }
+                    }
+                }
+
                 ElderSelectorView()
                     .padding(.horizontal)
                     .padding(.bottom, 16)
 
                 Divider()
 
-                // Reminders
-                let todayReminders = appState.todayReminders(for: appState.selectedElder)
+                let reminders = appState.remindersForCurrentUser(on: selectedDate)
 
-                if todayReminders.isEmpty {
+                if reminders.isEmpty {
                     Spacer()
                     VStack(spacing: 12) {
                         Image(systemName: "checkmark.circle")
                             .font(.system(size: 48))
                             .foregroundColor(.green)
-                        Text("No reminders today!")
+                        Text(isShowingToday ? "No reminders today!" : "No reminders on this date.")
                             .font(.headline)
                             .foregroundColor(.secondary)
                     }
@@ -60,7 +71,7 @@ struct DashboardView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 12) {
-                            ForEach(todayReminders) { reminder in
+                            ForEach(reminders) { reminder in
                                 DashboardReminderRow(reminder: reminder)
                             }
                         }
@@ -69,12 +80,18 @@ struct DashboardView: View {
                     }
                 }
             }
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
+            .task {
+                await appState.loadDashboardReminders(for: selectedDate)
+            }
+            .onChange(of: appState.selectedElderIndex) {
+                Task {
+                    await appState.loadDashboardReminders(for: selectedDate)
+                }
+            }
         }
     }
 }
-
-// MARK: - Dashboard Reminder Row
 
 struct DashboardReminderRow: View {
     let reminder: Reminder
@@ -87,13 +104,7 @@ struct DashboardReminderRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
-                    .frame(width: 48, height: 48)
-                Text(reminder.imageName ?? "💊")
-                    .font(.title3)
-            }
+            ReminderImageView(imageName: reminder.imageName)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(reminder.title)
@@ -116,8 +127,6 @@ struct DashboardReminderRow: View {
         )
     }
 }
-
-// MARK: - Status Badge
 
 struct StatusBadgeView: View {
     let reminder: Reminder

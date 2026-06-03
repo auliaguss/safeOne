@@ -1,43 +1,75 @@
-//
-//  AddReminderView.swift
-//  ElderCareApp
-//
-//  Created by Hercio Venceslau Silla on 28/05/26.
-//
-
 import SwiftUI
+import UIKit
 
 struct AddReminderView: View {
     @EnvironmentObject var appState: AppState
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.dismiss) private var dismiss
 
-    @State private var title: String = ""
-    @State private var notes: String = ""
-    @State private var selectedDate: Date = Date()
-    @State private var selectedTime: Date = Date()
+    private let reminder: Reminder?
+
+    @State private var title = ""
+    @State private var notes = ""
+    @State private var selectedDate = Date()
+    @State private var selectedTime = Date()
     @State private var repeatOption: RepeatOption = .none
     @State private var earlyReminder: EarlyReminderOption = .none
     @State private var category: ReminderCategory = .none
-    @State private var selectedEmoji: String = "💊"
+    @State private var selectedEmoji = "💊"
     @State private var showDatePicker = false
     @State private var showTimePicker = false
+    @State private var showImageSourcePicker = false
+    @State private var imageSourceType: UIImagePickerController.SourceType = .photoLibrary
+    @State private var showImagePicker = false
 
-    let emojiOptions: [String] = ["💊", "🩺", "🏃", "🍎", "💉", "🩹", "🧘", "🚶"]
+    private let emojiOptions = ["💊", "🩺", "🏃", "🍎", "💉", "🩹", "🧘", "🚶"]
+
+    init(reminder: Reminder? = nil) {
+        self.reminder = reminder
+        _title = State(initialValue: reminder?.title ?? "")
+        _notes = State(initialValue: reminder?.notes ?? "")
+        _selectedDate = State(initialValue: reminder?.date ?? Date())
+        _selectedTime = State(initialValue: reminder?.date ?? Date())
+        _repeatOption = State(initialValue: reminder?.repeatOption ?? .none)
+        _earlyReminder = State(initialValue: reminder?.earlyReminder ?? .none)
+        _category = State(initialValue: reminder?.category ?? .none)
+        _selectedEmoji = State(initialValue: reminder?.imageName ?? "💊")
+    }
  
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
+                    VStack(spacing: 12) {
+                        Button {
+                            showImageSourcePicker = true
+                        } label: {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.blue.opacity(0.1))
+                                    .frame(width: 96, height: 96)
 
-                    // Emoji / Photo Picker
-                    VStack(spacing: 8) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.blue.opacity(0.1))
-                                .frame(width: 90, height: 90)
-                            Text(selectedEmoji)
-                                .font(.system(size: 40))
+                                if let fileName = ReminderImageReference.fileName(from: selectedEmoji),
+                                   let image = LocalImageStore.load(fileName: fileName) {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 96, height: 96)
+                                        .clipShape(Circle())
+                                } else {
+                                    Text(selectedEmoji)
+                                        .font(.system(size: 40))
+                                }
+
+                                Image(systemName: "camera.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                                    .frame(width: 28, height: 28)
+                                    .background(Color.blue)
+                                    .clipShape(Circle())
+                                    .offset(x: 34, y: 34)
+                            }
                         }
+                        .buttonStyle(.plain)
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
@@ -59,7 +91,7 @@ struct AddReminderView: View {
                             .padding(.horizontal)
                         }
 
-                        Text("Add photo")
+                        Text("Tap image to add photo")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -68,7 +100,6 @@ struct AddReminderView: View {
 
                     Divider()
 
-                    // Title & Notes
                     TextField("Title", text: $title)
                         .padding(.horizontal)
                         .padding(.vertical, 14)
@@ -80,7 +111,6 @@ struct AddReminderView: View {
 
                     Divider().padding(.top, 8)
 
-                    // Date & Time
                     SectionHeader(title: "Date & Time")
 
                     Button(action: { showDatePicker.toggle() }) {
@@ -113,7 +143,6 @@ struct AddReminderView: View {
 
                     Divider().padding(.top, 8)
 
-                    // Reminder Options
                     SectionHeader(title: "Reminder")
 
                     Menu {
@@ -148,6 +177,32 @@ struct AddReminderView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .confirmationDialog("Reminder Photo", isPresented: $showImageSourcePicker) {
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    Button("Camera") {
+                        imageSourceType = .camera
+                        showImagePicker = true
+                    }
+                }
+
+                Button("Gallery") {
+                    imageSourceType = .photoLibrary
+                    showImagePicker = true
+                }
+
+                Button("Remove Photo", role: .destructive) {
+                    selectedEmoji = "💊"
+                }
+
+                Button("Cancel", role: .cancel) {}
+            }
+            .sheet(isPresented: $showImagePicker) {
+                ImagePicker(sourceType: imageSourceType) { image in
+                    if let fileName = LocalImageStore.save(image) {
+                        selectedEmoji = ReminderImageReference.imageName(for: fileName)
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { dismiss() }) {
@@ -156,11 +211,15 @@ struct AddReminderView: View {
                     }
                 }
                 ToolbarItem(placement: .principal) {
-                    Text("Add Reminder")
+                    Text(reminder == nil ? "Add Reminder" : "Edit Reminder")
                         .font(.headline)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: saveReminder) {
+                    Button {
+                        Task {
+                            await saveReminder()
+                        }
+                    } label: {
                         ZStack {
                             Circle()
                                 .fill(title.isEmpty ? Color(.systemGray4) : Color.blue)
@@ -177,7 +236,7 @@ struct AddReminderView: View {
         }
     }
 
-    func saveReminder() {
+    private func saveReminder() async {
         let cal = Calendar.current
         var comps = cal.dateComponents([.year, .month, .day], from: selectedDate)
         let timeComps = cal.dateComponents([.hour, .minute], from: selectedTime)
@@ -186,21 +245,26 @@ struct AddReminderView: View {
         let finalDate = cal.date(from: comps) ?? selectedDate
 
         let newReminder = Reminder(
+            id: reminder?.id ?? UUID(),
             title: title,
             notes: notes,
             date: finalDate,
             repeatOption: repeatOption,
             earlyReminder: earlyReminder,
             category: category,
-            elderID: appState.selectedElder?.id ?? UUID(),
+            isCompleted: reminder?.isCompleted ?? false,
+            completedCount: reminder?.completedCount ?? 0,
+            totalCount: reminder?.totalCount ?? 1,
+            elderID: reminder?.elderID ?? appState.selectedElder?.id ?? UUID(),
+            isPast: reminder?.isPast ?? false,
             imageName: selectedEmoji
         )
-        appState.addReminder(newReminder)
+
+        await appState.saveReminder(newReminder)
+
         dismiss()
     }
 }
-
-// MARK: - Shared Row Component
 
 struct FormPickerRowDisplay: View {
     let label: String

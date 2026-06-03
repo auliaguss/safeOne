@@ -1,36 +1,39 @@
-//
-//  safeOneApp.swift
-//  safeOne
-//
-//  Created by Aulia Agus on 20/05/26.
-//
-
 import SwiftUI
 
-enum UserRole {
-    case elder, children
-}
+enum UserRole: String, Codable, CaseIterable {
+    case elder
+    case children
 
-@main
-struct safeOneApp: App {
-    @StateObject private var appState = AppState()
-    @State private var userRole: UserRole? = nil
-
-    var body: some Scene {
-        WindowGroup {
-            if let role = userRole {
-                if role == .elder {
-                    ElderContentView()
-                        .environmentObject(appState)
-                } else {
-                    ContentView()
-                        .environmentObject(appState)
-                }
-            } else {
-                Onboarding(onComplete: { role in userRole = role })
-                    .environmentObject(appState)
-            }
+    var displayName: String {
+        switch self {
+        case .elder:
+            return "Elder"
+        case .children:
+            return "Children"
         }
     }
 }
 
+@main
+struct SafeOneApp: App {
+    @StateObject private var appState = AppState()
+
+    var body: some Scene {
+        WindowGroup {
+            Group {
+                switch appState.session?.user.role {
+                case .elder:
+                    ElderContentView()
+                case .children:
+                    ContentView()
+                case nil:
+                    Onboarding()
+                }
+            }
+            .environmentObject(appState)
+            .task {
+                await appState.restoreSession()
+            }
+        }
+    }
+}
