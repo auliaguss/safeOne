@@ -1,5 +1,6 @@
 import AuthenticationServices
 import Foundation
+import Supabase
 import UIKit
 
 struct AppleLoginRequest: Codable {
@@ -21,13 +22,55 @@ final class AuthService {
         decoder.dateDecodingStrategy = .iso8601
     }
 
-    func signInWithApple(credential: ASAuthorizationAppleIDCredential, role: UserRole) async throws -> AuthSession {
+    func signInWithApple(
+        credential: ASAuthorizationAppleIDCredential,
+        role: UserRole,
+        nonce: String? = nil
+    ) async throws -> AuthSession {
         let request = AppleLoginRequest(
             identityToken: String(data: credential.identityToken ?? Data(), encoding: .utf8) ?? "",
             authorizationCode: String(data: credential.authorizationCode ?? Data(), encoding: .utf8) ?? "",
             fullName: credential.fullName?.formatted(),
             role: role
         )
+
+        if let nonce {
+            do {
+                let supabaseSession = try await SupabaseManager.shared.client.auth.signInWithIdToken(
+                    credentials: OpenIDConnectCredentials(
+                        provider: .apple,
+                        idToken: request.identityToken
+                    )
+                )
+
+                let userID = UUID(uuidString: String(describing: supabaseSession.user.id)) ?? UUID()
+                let profile = UserProfile(
+                    id: userID,
+                    name: request.fullName ?? supabaseSession.user.email ?? "SafeOne User",
+                    email: supabaseSession.user.email,
+                    role: role,
+                    avatar: nil,
+                    connectedDevices: [],
+                    notificationPreferences: NotificationPreferences(
+                        sound: .default,
+                        hapticsEnabled: true,
+                        textToSpeechEnabled: true
+                    )
+                )
+
+                let session = AuthSession(
+                    accessToken: supabaseSession.accessToken,
+                    refreshToken: supabaseSession.refreshToken,
+                    user: profile
+                )
+
+                save(session)
+                _ = try? await SupabaseRepository.shared.upsertProfile(profile)
+                return session
+            } catch {
+                // Fall back to the current development flow if Supabase auth is not ready yet.
+            }
+        }
 
         do {
             let session: AuthSession = try await apiClient.request(
@@ -51,6 +94,10 @@ final class AuthService {
     }
 
     func logout(token: String?) async {
+        if SupabaseManager.shared.client.auth.currentSession != nil {
+            try? await SupabaseManager.shared.client.auth.signOut()
+        }
+
         if let token {
             let _: EmptyResponse? = try? await apiClient.request(
                 "auth/logout",

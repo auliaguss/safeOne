@@ -1,8 +1,12 @@
+import AuthenticationServices
+import CryptoKit
+import Security
 import SwiftUI
 
 struct Onboarding: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedRole: UserRole?
+    @State private var currentNonce: String?
 
     var body: some View {
         ZStack {
@@ -95,21 +99,58 @@ struct Onboarding: View {
                         roleButton(title: "Caregiver", systemImage: "person.2.fill", role: .children)
                     }
 
+                    SignInWithAppleButton(.signIn) { request in
+                        request.requestedScopes = [.fullName, .email]
+                        let nonce = Self.randomNonceString()
+                        currentNonce = nonce
+                        request.nonce = Self.sha256(nonce)
+                    } onCompletion: { result in
+                        guard let selectedRole else { return }
+                        let nonce = currentNonce
+
+                        switch result {
+                        case .success(let authorization):
+                            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                                appState.apiMessage = "Apple sign-in failed."
+                                return
+                            }
+
+                            Task {
+                                await appState.signInWithApple(
+                                    credential: credential,
+                                    role: selectedRole,
+                                    nonce: nonce
+                                )
+                                currentNonce = nil
+                            }
+                        case .failure(let error):
+                            appState.apiMessage = error.localizedDescription
+                        }
+                    }
+                    .signInWithAppleButtonStyle(.black)
+                    .frame(maxWidth: 375)
+                    .frame(height: 48)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .disabled(selectedRole == nil)
+                    .opacity(selectedRole == nil ? 0.55 : 1.0)
+
                     Button {
                         guard let selectedRole else { return }
                         Task {
                             await appState.signInLocally(role: selectedRole)
                         }
                     } label: {
-                        Text("Continue for Development")
+                        Text("Continue without Apple")
                             .fontWeight(.semibold)
                             .frame(maxWidth: .infinity)
                             .frame(height: 48)
                     }
                     .buttonStyle(.bordered)
+                    .tint(.blue)
                     .disabled(selectedRole == nil)
 
-                    Text("Authentication is skipped for now.")
+                    Text("If Apple sign-in fails, use the local demo login to keep testing.")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }
@@ -140,6 +181,43 @@ struct Onboarding: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: 18))
         }
+    }
+
+    private static func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remainingLength = length
+
+        while remainingLength > 0 {
+            let randoms: [UInt8] = (0 ..< 16).map { _ in
+                var random: UInt8 = 0
+                let errorCode = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
+                if errorCode != errSecSuccess {
+                    fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)")
+                }
+                return random
+            }
+
+            randoms.forEach { random in
+                if remainingLength == 0 {
+                    return
+                }
+
+                if random < charset.count {
+                    result.append(charset[Int(random)])
+                    remainingLength -= 1
+                }
+            }
+        }
+
+        return result
+    }
+
+    private static func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashed = SHA256.hash(data: inputData)
+        return hashed.map { String(format: "%02x", $0) }.joined()
     }
 }
 
