@@ -1,12 +1,22 @@
+//
+//  ProfileView.swift
+//  ElderCareApp
+//
+//  Created by Hercio Venceslau Silla on 28/05/26.
+//
+
 import SwiftUI
 
 // MARK: - Profile View
+
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
+    @State private var hapticsEnabled: Bool = true
+    @State private var textToSpeechEnabled: Bool = true
     @State private var goToOnboarding = false
-    @State private var showEditProfile = false
+    @State private var soundsDefault: String = "Default"
     @State private var alertsValue: String = "Elders missed 1 reminder"
-
+    
     var body: some View {
         NavigationStack {
             List {
@@ -17,42 +27,33 @@ struct ProfileView: View {
                             Circle()
                                 .fill(Color(.systemGray4))
                                 .frame(width: 50, height: 50)
-                            if let avatar = appState.currentUser?.avatar, !avatar.isEmpty {
-                                Text(avatar)
-                                    .font(.system(size: 28))
-                            } else {
-                                Image(systemName: "person.fill")
-                                    .font(.title2)
-                                    .foregroundColor(.white)
-                            }
+                            Image(systemName: "person.fill")
+                                .font(.title2)
+                                .foregroundColor(.white)
                         }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(appState.currentUser?.name ?? "Caregiver")
+                            Text("Bowo Prabu")
                                 .font(.headline)
                             Text("Children")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
                     .padding(.vertical, 4)
-                    .contentShape(Rectangle())
-                    .onTapGesture { showEditProfile = true }
                 }
-
+                
                 // Account
                 Section("Account") {
                     NavigationLink("Elder Lists") {
-                        Text("Elder Lists")
-                            .navigationTitle("Elder Lists")
+                        ElderListView()
                     }
+                    
                 }
-
+                
                 // Notification
                 Section("Notification") {
+                    
+                                    
                     HStack {
                         Text("Alerts")
                         Spacer()
@@ -64,150 +65,224 @@ struct ProfileView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-
+                
                 // General
                 Section("General") {
                     NavigationLink("Emergency Services") {
-                        Text("Emergency Services").navigationTitle("Emergency Services")
+                        Text("Emergency Services")
+                            .navigationTitle("Emergency Services")
                     }
                     NavigationLink("Data & Privacy") {
-                        Text("Data & Privacy").navigationTitle("Data & Privacy")
+                        Text("Data & Privacy")
+                            .navigationTitle("Data & Privacy")
                     }
+                    
                 }
-
-                
+                Button {
+                    goToOnboarding = true
+                } label: {
+                    Text("Logout")
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.red)
+                        .cornerRadius(16)
+                }
+                .padding()
             }
             .navigationDestination(isPresented: $goToOnboarding) {
                 Onboarding()
             }
+            
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showEditProfile) {
-                EditProfileView()
-                    .environmentObject(appState)
-            }
         }
     }
 }
 
-// MARK: - Edit Profile View
-struct EditProfileView: View {
+// MARK: - Elder List View (Account > Elder Lists)
+struct ElderListView: View {
     @EnvironmentObject var appState: AppState
-    @Environment(\.dismiss) var dismiss
-
-    @State private var name: String = ""
-    @State private var avatar: String = ""
-    @State private var isSaving = false
+    @State private var elders: [BackendElder] = []
+    @State private var isLoading = false
+    @State private var showAddElder = false
+    @State private var otpCode = ""
     @State private var errorMessage: String? = nil
-
-    let avatarOptions = ["😊", "👦", "👧", "👨", "👩", "🧑", "👴", "👵", "🧓", "🙂"]
+    @State private var successMessage: String? = nil
 
     var body: some View {
-        NavigationStack {
-            Form {
-                // User ID
-                Section("User ID") {
-                    Text(appState.currentUser?.id ?? "-")
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .textSelection(.enabled)
+        List {
+            if isLoading {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
                 }
-
-                // Avatar
-                Section("Avatar") {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
-                        ForEach(avatarOptions, id: \.self) { emoji in
-                            Text(emoji)
-                                .font(.system(size: 36))
-                                .frame(width: 56, height: 56)
-                                .background(avatar == emoji ? Color.blue.opacity(0.2) : Color(.systemGray6))
-                                .clipShape(Circle())
-                                .overlay(
-                                    Circle().stroke(avatar == emoji ? Color.blue : Color.clear, lineWidth: 2)
-                                )
-                                .onTapGesture { avatar = emoji }
+            } else {
+                ForEach(elders) { elder in
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(Color(.systemBlue).opacity(0.15))
+                                .frame(width: 44, height: 44)
+                            Text(String(elder.name.prefix(1)))
+                                .font(.headline)
+                                .foregroundColor(.blue)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(elder.name)
+                                .font(.body)
+                                .fontWeight(.medium)
+                            Text("Elder")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                }
+                .onDelete { indexSet in
+                    Task {
+                        for index in indexSet {
+                            await removeElder(elders[index].id)
                         }
                     }
-                    .padding(.vertical, 8)
-                }
-
-                // Name
-                Section("Name") {
-                    TextField("Enter your name", text: $name)
-                }
-
-                if let error = errorMessage {
-                    Section {
-                        Text(error)
-                            .foregroundColor(.red)
-                            .font(.caption)
-                    }
                 }
             }
-            .navigationTitle("Edit Profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        Task { await saveProfile() }
-                    } label: {
-                        if isSaving { ProgressView() } else { Text("Save").bold() }
-                    }
-                    .disabled(isSaving || name.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+        .navigationTitle("Elder Lists")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showAddElder = true }) {
+                    Image(systemName: "plus")
                 }
             }
-            .onAppear {
-                name = appState.currentUser?.name ?? ""
-                avatar = appState.currentUser?.avatar ?? ""
+            ToolbarItem(placement: .navigationBarLeading) {
+                EditButton()
             }
+        }
+        .alert("Add Elder via OTP", isPresented: $showAddElder) {
+            TextField("Enter OTP Code", text: $otpCode)
+                .keyboardType(.numberPad)
+            Button("Add") {
+                Task { await verifyOtp() }
+            }
+            Button("Cancel", role: .cancel) { otpCode = "" }
+        } message: {
+            if let error = errorMessage {
+                Text(error)
+            } else {
+                Text("Enter the OTP code from the elder's device.")
+            }
+        }
+        .onAppear {
+            Task { await fetchElders() }
         }
     }
 
-    private func saveProfile() async {
+    // MARK: - Fetch Elders
+    private func fetchElders() async {
         guard let token = appState.token,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/users/me")
-        else { return }
+              let url = URL(string: "https://safe-one-backend.vercel.app/api/users/me/elders")
+        else {
+            print("❌ Token atau URL nil")
+            return
+        }
 
-        isSaving = true
+        isLoading = true
         var request = URLRequest(url: url)
-        request.httpMethod = "PATCH"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONSerialization.data(withJSONObject: [
-            "name": name.trimmingCharacters(in: .whitespaces),
-            "avatar": avatar
-        ])
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-            else {
-                await MainActor.run { errorMessage = "Failed to save. Try again."; isSaving = false }
-                return
-            }
-
+            
+            // Print raw response
+            print("📡 Status code: \((response as? HTTPURLResponse)?.statusCode ?? 0)")
+            print("📡 Raw response: \(String(data: data, encoding: .utf8) ?? "nil")")
+            
+            let decoded = try JSONDecoder().decode([BackendElder].self, from: data)
             await MainActor.run {
-                if let user = appState.currentUser {
-                    let updated = CurrentUser(
-                        id: user.id,
-                        name: json["name"] as? String ?? user.name,
-                        role: user.role,
-                        avatar: json["avatar"] as? String ?? user.avatar
-                    )
-                    appState.currentUser = updated
-                    if let encoded = try? JSONEncoder().encode(updated) {
-                        UserDefaults.standard.set(encoded, forKey: "current_user")
-                    }
-                }
-                isSaving = false
-                dismiss()
+                elders = decoded
+                isLoading = false
+                print("✅ Elders loaded: \(decoded.count)")
             }
         } catch {
-            await MainActor.run { errorMessage = "Network error. Try again."; isSaving = false }
+            await MainActor.run { isLoading = false }
+            print("❌ Fetch elders error: \(error)")
         }
     }
+
+    // MARK: - Remove Elder
+    private func removeElder(_ elderId: String) async {
+        guard let token = appState.token,
+              let url = URL(string: "https://safe-one-backend.vercel.app/api/users/me/elders/\(elderId)")
+        else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse, http.statusCode == 200 {
+                await MainActor.run {
+                    elders.removeAll { $0.id == elderId }
+                }
+            }
+        } catch {
+            print("❌ Remove elder error: \(error)")
+        }
+    }
+
+    // MARK: - Verify OTP
+    private func verifyOtp() async {
+        guard let token = appState.token,
+              let url = URL(string: "https://safe-one-backend.vercel.app/api/otp/verify")
+        else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["code": otpCode])
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { return }
+
+            if http.statusCode == 200 {
+                await MainActor.run {
+                    otpCode = ""
+                    errorMessage = nil
+                }
+                await fetchElders() // Refresh list
+            } else {
+                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                let msg = json?["error"] as? String ?? "Invalid OTP code"
+                await MainActor.run {
+                    errorMessage = msg
+                    otpCode = ""
+                }
+            }
+        } catch {
+            await MainActor.run { errorMessage = "Network error. Try again." }
+        }
+    }
+}
+
+// MARK: - Model
+struct BackendElder: Codable, Identifiable {
+    let id: String
+    let name: String
+    let avatar: String?
+    let connectedSince: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, avatar
+        case connectedSince = "connected_since"
+    }
+}
+
+#Preview {
+    ProfileView()
 }
