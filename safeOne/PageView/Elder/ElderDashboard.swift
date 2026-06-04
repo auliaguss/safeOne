@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 enum ElderTab {
     case dashboard
@@ -150,6 +151,18 @@ struct ElderDashboard: View {
             }
             .fullScreenCover(isPresented: $showCallingScreen) {
                 ElderCallingView()
+            }
+            // TAMBAHKAN BLOK INI DI SINI
+            .onAppear {
+                // 1. Minta izin Mikrofon
+                AVAudioApplication.requestRecordPermission { granted in
+                    print("🎙️ Izin Mikrofon Elder: \(granted)")
+                }
+                
+                // 2. Minta izin Kamera
+                AVCaptureDevice.requestAccess(for: .video) { granted in
+                    print("📷 Izin Kamera Elder: \(granted)")
+                }
             }
         }
         .navigationBarHidden(true)

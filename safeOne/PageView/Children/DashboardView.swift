@@ -2,18 +2,17 @@
 //  DashboardView.swift
 //  ElderCareApp
 //
-//  Created by Hercio Venceslau Silla on 28/05/26.
-//
 
 import SwiftUI
+import Combine
 
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
-
+    
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 0) {
-
+                
                 // Header
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -34,17 +33,17 @@ struct DashboardView: View {
                 .padding(.horizontal)
                 .padding(.top, 16)
                 .padding(.bottom, 12)
-
+                
                 // Elder Selector
                 ElderSelectorView()
                     .padding(.horizontal)
                     .padding(.bottom, 16)
-
+                
                 Divider()
-
+                
                 // Reminders
                 let todayReminders = appState.todayReminders(for: appState.selectedElder)
-
+                
                 if todayReminders.isEmpty {
                     Spacer()
                     VStack(spacing: 12) {
@@ -71,6 +70,7 @@ struct DashboardView: View {
             }
             .navigationBarHidden(true)
         }
+        // Tidak ada lagi .fullScreenCover dan .onAppear untuk polling di sini
     }
 }
 
@@ -78,13 +78,13 @@ struct DashboardView: View {
 
 struct DashboardReminderRow: View {
     let reminder: Reminder
-
+    
     var timeString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH.mm"
         return formatter.string(from: reminder.date)
     }
-
+    
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
@@ -94,7 +94,7 @@ struct DashboardReminderRow: View {
                 Text(reminder.imageName ?? "💊")
                     .font(.title3)
             }
-
+            
             VStack(alignment: .leading, spacing: 2) {
                 Text(reminder.title)
                     .font(.body)
@@ -103,9 +103,9 @@ struct DashboardReminderRow: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
-
+            
             Spacer()
-
+            
             StatusBadgeView(reminder: reminder)
         }
         .padding(12)
@@ -121,7 +121,7 @@ struct DashboardReminderRow: View {
 
 struct StatusBadgeView: View {
     let reminder: Reminder
-
+    
     var body: some View {
         if reminder.isCompleted && reminder.totalCount == 1 {
             ZStack {
