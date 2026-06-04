@@ -1,9 +1,9 @@
 import SwiftUI
+import UIKit
 
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
     @State private var preferences = NotificationPreferences(sound: .default, hapticsEnabled: true, textToSpeechEnabled: true)
-    private let alertsValue = "Elders missed 1 reminder"
 
     var body: some View {
         NavigationStack {
@@ -19,7 +19,7 @@ struct ProfileView: View {
                                 .foregroundColor(.white)
                         }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(appState.profile?.name ?? "Bowo Prabu")
+                            Text(appState.profile?.name ?? appState.session?.user.name ?? "SafeOne User")
                                 .font(.headline)
                             Text(appState.profile?.role.displayName ?? "Children")
                                 .font(.subheadline)
@@ -30,11 +30,14 @@ struct ProfileView: View {
                 }
 
                 Section("Account") {
-                    NavigationLink("Elder Lists") {
+                    NavigationLink("Paired Elders") {
                         ElderListView()
                     }
                     NavigationLink("Connected Devices") {
                         ConnectedDevicesView()
+                    }
+                    NavigationLink("Emergency Services") {
+                        EmergencyContactsView()
                     }
                 }
 
@@ -62,24 +65,9 @@ struct ProfileView: View {
                         .onChange(of: preferences.hapticsEnabled) { savePreferences() }
                     Toggle("Text To Speech", isOn: $preferences.textToSpeechEnabled)
                         .onChange(of: preferences.textToSpeechEnabled) { savePreferences() }
-
-                    HStack {
-                        Text("Alerts")
-                        Spacer()
-                        Text(alertsValue)
-                            .foregroundColor(.secondary)
-                            .font(.subheadline)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
                 }
 
                 Section("General") {
-                    NavigationLink("Emergency Services") {
-                        Text("Emergency Services")
-                            .navigationTitle("Emergency Services")
-                    }
                     NavigationLink("Data & Privacy") {
                         Text("Data & Privacy")
                             .navigationTitle("Data & Privacy")
@@ -118,54 +106,114 @@ struct ProfileView: View {
 
 struct ElderListView: View {
     @EnvironmentObject var appState: AppState
-    @State private var showAddElder = false
-    @State private var newElderName = ""
+    @State private var showCodeShare = false
+    @State private var pairingCode: String?
     
     var body: some View {
         List {
-            ForEach(appState.elders) { elder in
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill(Color(.systemBlue).opacity(0.15))
-                            .frame(width: 44, height: 44)
-                        Text(String(elder.name.prefix(1)))
-                            .font(.headline)
-                            .foregroundColor(.blue)
+            Section {
+                if let pairingCode {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Pairing Code")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(pairingCode)
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .monospacedDigit()
+                        }
+                        Spacer()
+                        Button("Copy") {
+                            UIPasteboard.general.string = pairingCode
+                        }
                     }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(elder.name)
-                            .font(.body)
-                            .fontWeight(.medium)
-                        Text("Shown on monitoring dashboard")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
+                } else {
+                    Text("Generate a pairing code to connect an elder account.")
+                        .foregroundColor(.secondary)
                 }
-                .padding(.vertical, 4)
             }
-            .onDelete { indexSet in
-                appState.deleteElders(at: indexSet)
+
+            if appState.elders.isEmpty {
+                Text("No paired elders yet.")
+                    .foregroundColor(.secondary)
+            } else {
+                ForEach(appState.elders) { elder in
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(Color(.systemBlue).opacity(0.15))
+                                .frame(width: 44, height: 44)
+                            Text(String(elder.name.prefix(1)))
+                                .font(.headline)
+                                .foregroundColor(.blue)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(elder.name)
+                                .font(.body)
+                                .fontWeight(.medium)
+                            Text("Shown on monitoring dashboard")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                }
+                .onDelete { indexSet in
+                    appState.deleteElders(at: indexSet)
+                }
             }
         }
-        .navigationTitle("Elder Lists")
+        .navigationTitle("Paired Elders")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { showAddElder = true }) {
+                Button(action: { showCodeShare = true }) {
                     Image(systemName: "plus")
                 }
             }
         }
-        .alert("Add Elder", isPresented: $showAddElder) {
-            TextField("Elder's name", text: $newElderName)
-            Button("Add") {
-                appState.addElder(name: newElderName)
-                newElderName = ""
+        .sheet(isPresented: $showCodeShare) {
+            NavigationStack {
+                VStack(spacing: 20) {
+                    if let pairingCode {
+                        Text("Share this code with the elder device.")
+                            .foregroundColor(.secondary)
+                        Text(pairingCode)
+                            .font(.system(size: 40, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                    } else {
+                        Text("Generate a code to begin pairing.")
+                            .foregroundColor(.secondary)
+                    }
+
+                    Button {
+                        Task {
+                            pairingCode = await appState.generatePairingCode()
+                        }
+                    } label: {
+                        Text(pairingCode == nil ? "Generate Pairing Code" : "Regenerate Code")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                }
+                .padding()
+                .navigationTitle("Pairing")
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") { showCodeShare = false }
+                    }
+                }
+                .onAppear {
+                    pairingCode = appState.pairingCode
+                }
             }
-            Button("Cancel", role: .cancel) { newElderName = "" }
-        } message: {
-            Text("This elder will appear on the dashboard filter.")
         }
     }
 }

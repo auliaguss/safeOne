@@ -8,6 +8,7 @@ struct AppleLoginRequest: Codable {
     var authorizationCode: String
     var fullName: String?
     var role: UserRole
+    var nonce: String?
 }
 
 final class AuthService {
@@ -31,7 +32,8 @@ final class AuthService {
             identityToken: String(data: credential.identityToken ?? Data(), encoding: .utf8) ?? "",
             authorizationCode: String(data: credential.authorizationCode ?? Data(), encoding: .utf8) ?? "",
             fullName: credential.fullName?.formatted(),
-            role: role
+            role: role,
+            nonce: nonce
         )
 
         if let nonce {
@@ -105,11 +107,11 @@ final class AuthService {
                 token: token
             )
         }
-        UserDefaults.standard.removeObject(forKey: sessionKey)
+        SecureStore.deleteData(forKey: sessionKey)
     }
 
     func restoreSession() -> AuthSession? {
-        guard let data = UserDefaults.standard.data(forKey: sessionKey) else {
+        guard let data = SecureStore.readData(forKey: sessionKey) else {
             return nil
         }
         return try? decoder.decode(AuthSession.self, from: data)
@@ -117,7 +119,7 @@ final class AuthService {
 
     private func save(_ session: AuthSession) {
         guard let data = try? encoder.encode(session) else { return }
-        UserDefaults.standard.set(data, forKey: sessionKey)
+        SecureStore.saveData(data, forKey: sessionKey)
     }
 
     private func localSession(role: UserRole, name: String?) -> AuthSession {

@@ -5,6 +5,8 @@ alter table public.users enable row level security;
 alter table public.reminders enable row level security;
 alter table public.caregiver_assignments enable row level security;
 
+alter table public.pairings enable row level security;
+
 drop policy if exists "users_select_own" on public.users;
 create policy "users_select_own"
 on public.users
@@ -117,3 +119,25 @@ on public.caregiver_assignments
 for delete
 to authenticated
 using (child_id = auth.uid());
+
+drop policy if exists "pairings_select_own" on public.pairings;
+create policy "pairings_select_own"
+on public.pairings
+for select
+to authenticated
+using (caregiver_id = auth.uid() or elder_id = auth.uid());
+
+drop policy if exists "pairings_insert_own" on public.pairings;
+create policy "pairings_insert_own"
+on public.pairings
+for insert
+to authenticated
+with check (caregiver_id = auth.uid() or elder_id = auth.uid());
+
+drop policy if exists "pairings_update_own" on public.pairings;
+create policy "pairings_update_own"
+on public.pairings
+for update
+to authenticated
+using (caregiver_id = auth.uid() or elder_id = auth.uid())
+with check (caregiver_id = auth.uid() or elder_id = auth.uid());

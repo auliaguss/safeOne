@@ -40,6 +40,25 @@ Roles are `elder` and `children`.
 
 `UserProfile.notificationPreferences` controls reminder sound, haptics, and text-to-speech.
 
+## Pairing
+
+- `GET /pairings`
+  - Returns pairing records linked to the signed-in caregiver or elder.
+- `POST /pairings`
+  - Caregiver creates or refreshes a pairing code.
+  - Response: `PairingRecord`
+- `POST /pairings/join`
+  - Body: `{ "code": "ABC123" }`
+  - Elder joins a caregiver pairing and the backend creates the caregiver assignment.
+
+## Emergency Contacts
+
+- `GET /contacts/emergency`
+  - Response: `[EmergencyContact]`
+- `PUT /contacts/emergency`
+  - Body: `[EmergencyContact]`
+  - Response: saved contacts
+
 ## Real-time Calls
 
 Use WebRTC for audio/video media and a backend WebSocket for signaling:
@@ -52,4 +71,3 @@ Use WebRTC for audio/video media and a backend WebSocket for signaling:
   - Authenticated WebSocket used to relay `join`, `offer`, `answer`, `iceCandidate`, and `leave` events.
 
 The backend should relay signaling events only to participants in the same call room. The client-side template is `CallSignalingService`; media capture and peer connection setup should be added with WebRTC once the backend signaling route exists.
-

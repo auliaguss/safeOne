@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ElderReminderModalView: View {
+    @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss
     let reminder: Reminder
 
@@ -78,8 +79,13 @@ struct ElderReminderModalView: View {
                     .padding(.bottom, 30)
                     
                     VStack(spacing: 12) {
-                        Button(action: { dismiss() }) {
-                            Text("Snooze on 10 mins")
+                        Button {
+                            Task {
+                                await appState.snoozeReminder(reminder)
+                                dismiss()
+                            }
+                        } label: {
+                            Text("Snooze 5 mins")
                                 .font(.system(.headline, design: .rounded))
                                 .foregroundColor(Color(hex: "007AFF"))
                                 .frame(maxWidth: .infinity)
@@ -92,7 +98,12 @@ struct ElderReminderModalView: View {
                                 )
                         }
                         
-                        Button(action: { dismiss() }) {
+                        Button {
+                            Task {
+                                await appState.completeReminder(reminder)
+                                dismiss()
+                            }
+                        } label: {
                             Text("Done")
                                 .font(.system(.headline, design: .rounded))
                                 .fontWeight(.bold)

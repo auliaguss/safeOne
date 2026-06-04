@@ -1,9 +1,10 @@
 import SwiftUI
+import UIKit
 
 struct ElderDashboard: View {
     @EnvironmentObject var appState: AppState
-    @State private var showCallingScreen = false
     @State private var selectedReminder: Reminder?
+    @State private var showMissingContactAlert = false
 
     private var todaysReminders: [Reminder] {
         appState.remindersForCurrentUser(on: Date())
@@ -89,7 +90,11 @@ struct ElderDashboard: View {
 
                     Button(action: {
                         UINotificationFeedbackGenerator().notificationOccurred(.error)
-                        showCallingScreen = true
+                        if appState.faceTimeContact() != nil {
+                            appState.openFaceTime()
+                        } else {
+                            showMissingContactAlert = true
+                        }
                     }) {
                         Image(systemName: "phone.fill")
                             .font(.title2)
@@ -99,7 +104,7 @@ struct ElderDashboard: View {
                             .clipShape(Circle())
                             .shadow(color: Color(hex: "FF5E5B").opacity(0.35), radius: 8, x: 0, y: 4)
                     }
-                    .accessibilityLabel("Emergency call")
+                    .accessibilityLabel("FaceTime caregiver")
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 10)
@@ -109,11 +114,13 @@ struct ElderDashboard: View {
             .sheet(item: $selectedReminder) { item in
                 ElderReminderModalView(reminder: item)
             }
-            .fullScreenCover(isPresented: $showCallingScreen) {
-                ElderCallingView()
-            }
             .task {
                 await appState.loadDashboardReminders(for: Date())
+            }
+            .alert("No FaceTime Contact", isPresented: $showMissingContactAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Add a primary caregiver contact in Emergency Services before using the one-tap call button.")
             }
         }
         .toolbar(.hidden, for: .navigationBar)

@@ -18,7 +18,7 @@ struct ElderProfileView: View {
                                 .foregroundColor(.white)
                         }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(appState.profile?.name ?? "Sukarni")
+                            Text(appState.profile?.name ?? appState.session?.user.name ?? "SafeOne User")
                                 .font(.headline)
                             Text(appState.profile?.role.displayName ?? "Elder")
                                 .font(.subheadline)
@@ -29,16 +29,11 @@ struct ElderProfileView: View {
                 }
 
                 Section("Account") {
-                    NavigationLink("Family") {
-                        Text("Family")
-                            .navigationTitle("Family")
-                    }
                     NavigationLink("Connected Devices") {
                         ConnectedDevicesView()
                     }
-                    NavigationLink("Health Information") {
-                        Text("Health Information")
-                            .navigationTitle("Health Information")
+                    NavigationLink("Emergency Services") {
+                        EmergencyContactsView()
                     }
                 }
 
@@ -69,10 +64,6 @@ struct ElderProfileView: View {
                 }
 
                 Section("General") {
-                    NavigationLink("Emergency Services") {
-                        Text("Emergency Services")
-                            .navigationTitle("Emergency Services")
-                    }
                     NavigationLink("Data & Privacy") {
                         Text("Data & Privacy")
                             .navigationTitle("Data & Privacy")

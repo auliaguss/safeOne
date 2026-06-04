@@ -22,6 +22,14 @@ final class ReminderAlertCoordinator {
         }
     }
 
+    func resetAlertState(for reminderID: UUID) {
+        alertedReminderIDs.remove(reminderID)
+    }
+
+    func markCompleted(_ reminderID: UUID) {
+        alertedReminderIDs.insert(reminderID)
+    }
+
     private func triggerAlert(for reminder: Reminder, preferences: NotificationPreferences) {
         if preferences.hapticsEnabled {
             UINotificationFeedbackGenerator().notificationOccurred(.warning)
@@ -41,4 +49,3 @@ final class ReminderAlertCoordinator {
         }
     }
 }
-

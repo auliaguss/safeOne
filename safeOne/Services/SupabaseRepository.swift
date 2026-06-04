@@ -73,6 +73,83 @@ final class SupabaseRepository {
         return elders
     }
 
+    func loadPairings() async throws -> [PairingRecord] {
+        let userID = try currentUserID()
+        let rows: [SupabasePairingRow] = try await client.database
+            .from("pairings")
+            .select()
+            .or("caregiver_id.eq.\(userID.uuidString),elder_id.eq.\(userID.uuidString)")
+            .execute()
+            .value
+
+        return rows.map(\.toModel)
+    }
+
+    func generatePairingCode() async throws -> PairingRecord {
+        let caregiverID = try currentUserID()
+        let caregiverProfile = try await loadProfile()
+        let code = Self.makePairingCode()
+        let row = SupabasePairingRow(
+            pairingCode: code,
+            caregiverID: caregiverID,
+            caregiverName: caregiverProfile.name,
+            elderID: nil,
+            elderName: nil
+        )
+
+        let rows: [SupabasePairingRow] = try await client.database
+            .from("pairings")
+            .upsert(row, onConflict: "caregiver_id")
+            .select()
+            .execute()
+            .value
+
+        if let first = rows.first {
+            return first.toModel
+        }
+
+        return row.toModel
+    }
+
+    func joinPairing(code: String) async throws -> PairingRecord {
+        let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let elderID = try currentUserID()
+        let elderProfile = try await loadProfile()
+        let pairingRows: [SupabasePairingRow] = try await client.database
+            .from("pairings")
+            .select()
+            .eq("pairing_code", value: normalized)
+            .limit(1)
+            .execute()
+            .value
+
+        guard let pairing = pairingRows.first else {
+            throw SupabaseRepositoryError.missingPairingCode
+        }
+
+        let updatedRow = SupabasePairingRow(
+            pairingCode: normalized,
+            caregiverID: pairing.caregiverID,
+            caregiverName: pairing.caregiverName,
+            elderID: elderID,
+            elderName: elderProfile.name
+        )
+
+        _ = try await client.database
+            .from("pairings")
+            .upsert(updatedRow, onConflict: "pairing_code")
+            .select()
+            .execute()
+
+        let assignment = CaregiverAssignmentRow(childID: pairing.caregiverID, elderID: elderID)
+        _ = try await client.database
+            .from("caregiver_assignments")
+            .upsert(assignment, onConflict: "child_id,elder_id")
+            .execute()
+
+        return updatedRow.toModel
+    }
+
     func createElder(name: String) async throws -> Elder {
         let caregiverID = try currentUserID()
         let elder = Elder(name: name)
@@ -200,12 +277,27 @@ final class SupabaseRepository {
 
 enum SupabaseRepositoryError: LocalizedError {
     case missingSession
+    case missingPairingCode
 
     var errorDescription: String? {
         switch self {
         case .missingSession:
             return "Supabase session is missing."
+        case .missingPairingCode:
+            return "Pairing code was not found."
         }
+    }
+}
+
+private extension SupabaseRepository {
+    static func makePairingCode(length: Int = 6) -> String {
+        let alphabet = Array("ABCDEFGHJKLMNPQRSTUVWXYZ23456789")
+        var code = ""
+        while code.count < length {
+            let index = Int.random(in: 0..<alphabet.count)
+            code.append(alphabet[index])
+        }
+        return code
     }
 }
 
@@ -293,6 +385,41 @@ private struct CaregiverAssignmentRow: Codable {
         self.childID = childID
         self.elderID = elderID
         self.createdAt = nil
+    }
+}
+
+private struct SupabasePairingRow: Codable {
+    var id: UUID?
+    var pairingCode: String
+    var caregiverID: UUID
+    var caregiverName: String
+    var elderID: UUID?
+    var elderName: String?
+    var createdAt: Date?
+    var updatedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case pairingCode = "pairing_code"
+        case caregiverID = "caregiver_id"
+        case caregiverName = "caregiver_name"
+        case elderID = "elder_id"
+        case elderName = "elder_name"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+
+    var toModel: PairingRecord {
+        PairingRecord(
+            id: id ?? UUID(),
+            pairingCode: pairingCode,
+            caregiverID: caregiverID,
+            caregiverName: caregiverName,
+            elderID: elderID,
+            elderName: elderName,
+            createdAt: createdAt ?? Date(),
+            updatedAt: updatedAt ?? Date()
+        )
     }
 }
 

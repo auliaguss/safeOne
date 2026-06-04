@@ -16,12 +16,12 @@ final class SupabaseManager {
         let supabaseURLString =
             Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String
             ?? UserDefaults.standard.string(forKey: "SUPABASE_URL")
-            ?? "https://kdknxnyxuxzamsaberzz.supabase.co"
+            ?? "https://qcivbqymwarzhavvkcjo.supabase.co"
 
         let supabaseAnonKey =
             Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String
             ?? UserDefaults.standard.string(forKey: "SUPABASE_ANON_KEY")
-            ?? "sb_publishable_JNXMNU3L-Aslx3EKaaxivw_tBWqzGpf"
+            ?? "sb_publishable_izdYMiPRu8oPCDx8kvt5vw_UYYBJSeA"
 
         client = SupabaseClient(
             supabaseURL: URL(string: supabaseURLString)!,

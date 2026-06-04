@@ -7,6 +7,7 @@ struct Onboarding: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedRole: UserRole?
     @State private var currentNonce: String?
+    @State private var pairingCode = ""
 
     var body: some View {
         ZStack {
@@ -99,6 +100,26 @@ struct Onboarding: View {
                         roleButton(title: "Caregiver", systemImage: "person.2.fill", role: .children)
                     }
 
+                    if selectedRole == .elder {
+                        TextField("Enter pairing code", text: $pairingCode)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(Color.white.opacity(0.92))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                        Text("Ask your caregiver for the pairing code shown in their app.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    } else if selectedRole == .children {
+                        Text("After sign-in, open Paired Elders in Profile to generate a code and share it with the elder.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+
                     SignInWithAppleButton(.signIn) { request in
                         request.requestedScopes = [.fullName, .email]
                         let nonce = Self.randomNonceString()
@@ -121,6 +142,14 @@ struct Onboarding: View {
                                     role: selectedRole,
                                     nonce: nonce
                                 )
+                                if selectedRole == .elder {
+                                    let joined = await appState.joinPairing(code: pairingCode)
+                                    if !joined {
+                                        appState.apiMessage = "Could not join pairing with the code you entered."
+                                    }
+                                } else if selectedRole == .children, appState.pairingCode == nil {
+                                    _ = await appState.generatePairingCode()
+                                }
                                 currentNonce = nil
                             }
                         case .failure(let error):
@@ -132,9 +161,10 @@ struct Onboarding: View {
                     .frame(height: 48)
                     .frame(maxWidth: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .disabled(selectedRole == nil)
-                    .opacity(selectedRole == nil ? 0.55 : 1.0)
+                    .disabled(selectedRole == nil || (selectedRole == .elder && pairingCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
+                    .opacity(selectedRole == nil || (selectedRole == .elder && pairingCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ? 0.55 : 1.0)
 
+#if DEBUG
                     Button {
                         guard let selectedRole else { return }
                         Task {
@@ -153,6 +183,7 @@ struct Onboarding: View {
                     Text("If Apple sign-in fails, use the local demo login to keep testing.")
                         .font(.footnote)
                         .foregroundColor(.secondary)
+#endif
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 28)

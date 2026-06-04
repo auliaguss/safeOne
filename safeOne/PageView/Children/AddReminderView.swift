@@ -244,6 +244,20 @@ struct AddReminderView: View {
         comps.minute = timeComps.minute
         let finalDate = cal.date(from: comps) ?? selectedDate
 
+        let elderID: UUID
+        switch appState.session?.user.role {
+        case .children:
+            guard let selectedElderID = reminder?.elderID ?? appState.selectedElder?.id else {
+                appState.apiMessage = "Select a paired elder before saving a reminder."
+                return
+            }
+            elderID = selectedElderID
+        case .elder:
+            elderID = appState.session?.user.id ?? (reminder?.elderID ?? UUID())
+        case nil:
+            elderID = reminder?.elderID ?? UUID()
+        }
+
         let newReminder = Reminder(
             id: reminder?.id ?? UUID(),
             title: title,
@@ -255,7 +269,7 @@ struct AddReminderView: View {
             isCompleted: reminder?.isCompleted ?? false,
             completedCount: reminder?.completedCount ?? 0,
             totalCount: reminder?.totalCount ?? 1,
-            elderID: reminder?.elderID ?? appState.selectedElder?.id ?? UUID(),
+            elderID: elderID,
             isPast: reminder?.isPast ?? false,
             imageName: selectedEmoji
         )

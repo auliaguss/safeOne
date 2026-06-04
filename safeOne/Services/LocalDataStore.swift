@@ -5,6 +5,8 @@ struct LocalDataStore {
     private let decoder = JSONDecoder()
     private let remindersKey = "localReminders"
     private let eldersKey = "localElders"
+    private let pairingsKey = "localPairings"
+    private let emergencyContactsKey = "localEmergencyContacts"
 
     init() {
         encoder.dateEncodingStrategy = .iso8601
@@ -30,5 +32,24 @@ struct LocalDataStore {
         guard let data = try? encoder.encode(elders) else { return }
         UserDefaults.standard.set(data, forKey: eldersKey)
     }
-}
 
+    func loadPairings() -> [PairingRecord]? {
+        guard let data = UserDefaults.standard.data(forKey: pairingsKey) else { return nil }
+        return try? decoder.decode([PairingRecord].self, from: data)
+    }
+
+    func savePairings(_ pairings: [PairingRecord]) {
+        guard let data = try? encoder.encode(pairings) else { return }
+        UserDefaults.standard.set(data, forKey: pairingsKey)
+    }
+
+    func loadEmergencyContacts() -> [EmergencyContact]? {
+        guard let data = UserDefaults.standard.data(forKey: emergencyContactsKey) else { return nil }
+        return try? decoder.decode([EmergencyContact].self, from: data)
+    }
+
+    func saveEmergencyContacts(_ contacts: [EmergencyContact]) {
+        guard let data = try? encoder.encode(contacts) else { return }
+        UserDefaults.standard.set(data, forKey: emergencyContactsKey)
+    }
+}

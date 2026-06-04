@@ -21,6 +21,8 @@ struct ReminderListView: View {
                                 .foregroundColor(.white)
                         }
                     }
+                    .disabled(appState.session?.user.role == .children && appState.selectedElder == nil)
+                    .opacity(appState.session?.user.role == .children && appState.selectedElder == nil ? 0.5 : 1.0)
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 12)

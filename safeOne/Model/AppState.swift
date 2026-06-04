@@ -2,76 +2,18 @@ import Combine
 import AuthenticationServices
 import Foundation
 
-private let sukarniID = UUID()
-private let jokoID = UUID()
-
 @MainActor
-class AppState: ObservableObject {
+final class AppState: ObservableObject {
     @Published var session: AuthSession?
     @Published var isLoading = false
     @Published var apiMessage: String?
-    @Published var elders: [Elder] = [
-        Elder(id: sukarniID, name: "Sukarni"),
-        Elder(id: jokoID, name: "Joko")
-    ]
-
-    @Published var reminders: [Reminder] = [
-        Reminder(
-            title: "Vitamin D",
-            notes: "1 Tablet",
-            date: Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date())!,
-            repeatOption: .everyday,
-            earlyReminder: .inTime,
-            category: .medication,
-            isCompleted: true,
-            completedCount: 1,
-            totalCount: 1,
-            elderID: sukarniID,
-            imageName: "💊"
-        ),
-        Reminder(
-            title: "Doctor Appointment",
-            notes: "",
-            date: Calendar.current.date(bySettingHour: 14, minute: 0, second: 0, of: Date())!,
-            repeatOption: .none,
-            earlyReminder: .none,
-            category: .appointment,
-            isCompleted: false,
-            completedCount: 0,
-            totalCount: 1,
-            elderID: sukarniID,
-            imageName: "🩺"
-        ),
-        Reminder(
-            title: "Antibiotics",
-            notes: "",
-            date: Calendar.current.date(bySettingHour: 9, minute: 5, second: 0, of: Date())!,
-            repeatOption: .everyday,
-            earlyReminder: .none,
-            category: .medication,
-            isCompleted: false,
-            completedCount: 1,
-            totalCount: 2,
-            elderID: sukarniID,
-            imageName: "💊"
-        ),
-        Reminder(
-            title: "Paracetamol",
-            notes: "",
-            date: Calendar.current.date(bySettingHour: 9, minute: 6, second: 0, of: Date())!,
-            repeatOption: .everyday,
-            earlyReminder: .none,
-            category: .medication,
-            isCompleted: false,
-            completedCount: 1,
-            totalCount: 2,
-            elderID: jokoID,
-            imageName: "💊"
-        )
-    ]
-
+    @Published var elders: [Elder] = []
+    @Published var reminders: [Reminder] = []
     @Published var selectedElderIndex: Int = 0
     @Published var profile: UserProfile?
+    @Published var pairingCode: String?
+    @Published var pairings: [PairingRecord] = []
+    @Published var emergencyContacts: [EmergencyContact] = []
 
     private let authService = AuthService()
     private let reminderService = ReminderService()
@@ -79,10 +21,12 @@ class AppState: ObservableObject {
     private let supabaseRepository = SupabaseRepository.shared
     private let alertCoordinator = ReminderAlertCoordinator()
     private let localDataStore = LocalDataStore()
+    private let notificationService = NotificationService.shared
+    private let faceTimeService = FaceTimeService.shared
     private var alertTask: Task<Void, Never>?
 
     init() {
-        if let savedElders = localDataStore.loadElders(), !savedElders.isEmpty {
+        if let savedElders = localDataStore.loadElders() {
             elders = savedElders
         }
 
@@ -90,7 +34,18 @@ class AppState: ObservableObject {
             reminders = savedReminders
         }
 
+        if let savedPairings = localDataStore.loadPairings() {
+            pairings = savedPairings
+        }
+
+        if let savedContacts = localDataStore.loadEmergencyContacts() {
+            emergencyContacts = savedContacts
+        }
+
         startAlertMonitoring()
+        Task {
+            await notificationService.requestAuthorization()
+        }
     }
 
     deinit {
@@ -112,15 +67,43 @@ class AppState: ObservableObject {
             ?? NotificationPreferences(sound: .default, hapticsEnabled: true, textToSpeechEnabled: true)
     }
 
+    var currentFaceTimeContacts: [FaceTimeContact] {
+        let contacts = emergencyContacts
+            .filter { $0.category == .caregiver || $0.isPrimary }
+            .map {
+                FaceTimeContact(
+                    id: $0.id,
+                    name: $0.name,
+                    address: $0.phoneNumber,
+                    isPrimary: $0.isPrimary
+                )
+            }
+
+        if contacts.isEmpty {
+            return emergencyContacts.map {
+                FaceTimeContact(id: $0.id, name: $0.name, address: $0.phoneNumber, isPrimary: $0.isPrimary)
+            }
+        }
+
+        return contacts
+    }
+
+    func bootstrap() async {
+        await notificationService.requestAuthorization()
+        await restoreSession()
+    }
+
     func restoreSession() async {
-        guard session == nil else { return }
+        guard session == nil else {
+            await syncAppData(for: session?.user.role)
+            return
+        }
+
         if let restoredSession = authService.restoreSession() {
             session = restoredSession
             profile = restoredSession.user
             startAlertMonitoring()
-            await loadProfile()
-            await loadElders()
-            await loadDashboardReminders(for: Date())
+            await syncAppData(for: restoredSession.user.role)
         }
     }
 
@@ -131,9 +114,7 @@ class AppState: ObservableObject {
         do {
             let newSession = try await authService.signInWithApple(credential: credential, role: role, nonce: nonce)
             apply(session: newSession)
-            await loadProfile()
-            await loadElders()
-            await loadDashboardReminders(for: Date())
+            await syncAppData(for: role)
         } catch {
             apiMessage = error.localizedDescription
         }
@@ -141,7 +122,7 @@ class AppState: ObservableObject {
 
     func signInLocally(role: UserRole) async {
         apply(session: authService.signInLocally(role: role))
-        await loadDashboardReminders(for: Date())
+        await syncAppData(for: role)
     }
 
     func logout() async {
@@ -149,6 +130,12 @@ class AppState: ObservableObject {
         await authService.logout(token: token)
         session = nil
         profile = nil
+        elders = []
+        reminders = []
+        pairings = []
+        pairingCode = nil
+        emergencyContacts = []
+        selectedElderIndex = 0
         alertTask?.cancel()
         alertTask = nil
     }
@@ -172,6 +159,7 @@ class AppState: ObservableObject {
             do {
                 let backendReminders = try await supabaseRepository.loadReminders(userID: userID)
                 merge(reminders: backendReminders)
+                await rescheduleNotifications(for: backendReminders)
                 return
             } catch {
                 apiMessage = "Supabase reminders are not ready yet. Using local reminder data."
@@ -184,6 +172,7 @@ class AppState: ObservableObject {
                 token: activeToken
             )
             merge(reminders: backendReminders)
+            await rescheduleNotifications(for: backendReminders)
         } catch APIError.backendNotConfigured {
             apiMessage = "Using local reminder data until backend is configured."
         } catch {
@@ -191,9 +180,25 @@ class AppState: ObservableObject {
         }
     }
 
-    func addReminder(_ reminder: Reminder) {
-        reminders.append(reminder)
-        persistReminders()
+    func remindersForCurrentUser(on date: Date) -> [Reminder] {
+        switch session?.user.role {
+        case .elder:
+            return reminders.filter {
+                $0.elderID == session?.user.id
+                    && Calendar.current.isDate($0.date, inSameDayAs: date)
+            }
+        case .children:
+            return reminders(for: selectedElder, on: date)
+        case nil:
+            return []
+        }
+    }
+
+    func reminderProgress(on date: Date) -> ReminderProgressSummary {
+        let current = remindersForCurrentUser(on: date)
+        let total = current.reduce(0) { $0 + max($1.totalCount, 1) }
+        let completed = current.reduce(0) { $0 + min($1.completedCount, max($1.totalCount, 1)) }
+        return ReminderProgressSummary(completed: completed, total: total)
     }
 
     func createReminder(_ reminder: Reminder) async {
@@ -201,6 +206,7 @@ class AppState: ObservableObject {
             do {
                 let created = try await supabaseRepository.upsertReminder(reminder)
                 addReminder(created)
+                await notificationService.schedule(reminder: created)
                 return
             } catch {
                 apiMessage = "Supabase reminder save failed. Using local data."
@@ -210,18 +216,15 @@ class AppState: ObservableObject {
         do {
             let created = try await reminderService.addReminder(reminder, token: activeToken)
             addReminder(created)
+            await notificationService.schedule(reminder: created)
         } catch APIError.backendNotConfigured {
             addReminder(reminder)
+            await notificationService.schedule(reminder: reminder)
         } catch {
             apiMessage = error.localizedDescription
             addReminder(reminder)
+            await notificationService.schedule(reminder: reminder)
         }
-    }
-
-    func updateReminder(_ reminder: Reminder) {
-        guard let index = reminders.firstIndex(where: { $0.id == reminder.id }) else { return }
-        reminders[index] = reminder
-        persistReminders()
     }
 
     func saveReminder(_ reminder: Reminder) async {
@@ -230,6 +233,7 @@ class AppState: ObservableObject {
                 do {
                     let updated = try await supabaseRepository.upsertReminder(reminder)
                     updateReminder(updated)
+                    await notificationService.schedule(reminder: updated)
                     return
                 } catch {
                     apiMessage = "Supabase reminder update failed. Using local data."
@@ -239,11 +243,14 @@ class AppState: ObservableObject {
             do {
                 let updated = try await reminderService.editReminder(reminder, token: activeToken)
                 updateReminder(updated)
+                await notificationService.schedule(reminder: updated)
             } catch APIError.backendNotConfigured {
                 updateReminder(reminder)
+                await notificationService.schedule(reminder: reminder)
             } catch {
                 apiMessage = error.localizedDescription
                 updateReminder(reminder)
+                await notificationService.schedule(reminder: reminder)
             }
         } else {
             await createReminder(reminder)
@@ -254,8 +261,7 @@ class AppState: ObservableObject {
         if supabaseRepository.isAvailable {
             do {
                 try await supabaseRepository.deleteReminders(ids: ids)
-                reminders.removeAll { ids.contains($0.id) }
-                persistReminders()
+                removeReminderIDs(ids)
                 return
             } catch {
                 apiMessage = "Supabase reminder delete failed. Using local data."
@@ -264,34 +270,37 @@ class AppState: ObservableObject {
 
         do {
             try await reminderService.deleteReminders(ids: ids, token: activeToken)
-            reminders.removeAll { ids.contains($0.id) }
-            persistReminders()
+            removeReminderIDs(ids)
         } catch APIError.backendNotConfigured {
-            reminders.removeAll { ids.contains($0.id) }
-            persistReminders()
+            removeReminderIDs(ids)
         } catch {
             apiMessage = error.localizedDescription
         }
     }
 
-    func reminders(for elder: Elder?, on date: Date) -> [Reminder] {
-        guard let elder else { return [] }
-
-        return reminders.filter {
-            Calendar.current.isDate($0.date, inSameDayAs: date)
-                && $0.elderID == elder.id
-        }
+    func completeReminder(_ reminder: Reminder) async {
+        guard let index = reminders.firstIndex(where: { $0.id == reminder.id }) else { return }
+        var updated = reminders[index]
+        let totalCount = max(updated.totalCount, 1)
+        updated.completedCount = min(totalCount, max(updated.completedCount + 1, 1))
+        updated.isCompleted = updated.completedCount >= totalCount
+        reminders[index] = updated
+        persistReminders()
+        alertCoordinator.markCompleted(updated.id)
+        await saveReminder(updated)
+        await notificationService.cancel(reminderID: updated.id)
     }
 
-    func remindersForCurrentUser(on date: Date) -> [Reminder] {
-        switch session?.user.role {
-        case .elder:
-            return reminders.filter { Calendar.current.isDate($0.date, inSameDayAs: date) }
-        case .children:
-            return reminders(for: selectedElder, on: date)
-        case nil:
-            return []
-        }
+    func snoozeReminder(_ reminder: Reminder, minutes: Int = 5) async {
+        guard let index = reminders.firstIndex(where: { $0.id == reminder.id }) else { return }
+        var updated = reminders[index]
+        updated.date = Calendar.current.date(byAdding: .minute, value: minutes, to: Date()) ?? Date()
+        updated.isCompleted = false
+        reminders[index] = updated
+        persistReminders()
+        alertCoordinator.resetAlertState(for: updated.id)
+        await notificationService.schedule(reminder: updated)
+        await saveReminder(updated)
     }
 
     func loadProfile() async {
@@ -304,6 +313,7 @@ class AppState: ObservableObject {
                 session?.user = backendProfile
                 session?.user.connectedDevices = devices
                 await loadElders()
+                await loadPairings()
                 return
             } catch {
                 apiMessage = "Supabase profile sync failed. Using local profile data."
@@ -376,40 +386,152 @@ class AppState: ObservableObject {
         if supabaseRepository.isAvailable {
             do {
                 let backendElders = try await supabaseRepository.loadElders()
-                if !backendElders.isEmpty {
-                    elders = backendElders
-                    persistElders()
-                }
+                elders = backendElders
+                persistElders()
                 return
             } catch {
                 apiMessage = "Supabase elder sync failed. Using local elder data."
             }
         }
-    }
 
-    func addElder(name: String) {
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else { return }
-
-        if supabaseRepository.isAvailable {
-            Task {
-                do {
-                    let newElder = try await supabaseRepository.createElder(name: trimmedName)
-                    elders.append(newElder)
-                    persistElders()
-                } catch {
-                    apiMessage = "Supabase elder creation failed. Using local elder data."
-                    let newElder = Elder(name: trimmedName)
-                    elders.append(newElder)
-                    persistElders()
-                }
-            }
+        guard session?.user.role == .children else {
+            elders = []
+            persistElders()
             return
         }
 
-        let newElder = Elder(name: trimmedName)
-        elders.append(newElder)
-        persistElders()
+        syncEldersFromPairings()
+    }
+
+    func loadPairings() async {
+        if supabaseRepository.isAvailable {
+            do {
+                pairings = try await supabaseRepository.loadPairings()
+                persistPairings()
+                syncPairingUIState()
+                return
+            } catch {
+                apiMessage = "Supabase pairing sync failed. Using local pairing data."
+            }
+        }
+
+        if let saved = localDataStore.loadPairings() {
+            pairings = saved
+        }
+
+        syncPairingUIState()
+    }
+
+    func generatePairingCode() async -> String? {
+        if supabaseRepository.isAvailable {
+            do {
+                let record = try await supabaseRepository.generatePairingCode()
+                upsertPairing(record)
+                syncPairingUIState()
+                return record.pairingCode
+            } catch {
+                apiMessage = error.localizedDescription
+            }
+        }
+
+        guard let caregiverID = session?.user.id else { return nil }
+        let record = PairingRecord(
+            pairingCode: Self.makePairingCode(),
+            caregiverID: caregiverID,
+            caregiverName: profile?.name ?? session?.user.name ?? "SafeOne User",
+            elderID: nil,
+            elderName: nil
+        )
+        upsertPairing(record)
+        syncPairingUIState()
+        return record.pairingCode
+    }
+
+    func joinPairing(code: String) async -> Bool {
+        let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !normalized.isEmpty else { return false }
+
+        if supabaseRepository.isAvailable {
+            do {
+                let record = try await supabaseRepository.joinPairing(code: normalized)
+                upsertPairing(record)
+                syncPairingUIState()
+                return true
+            } catch {
+                apiMessage = error.localizedDescription
+            }
+        }
+
+        guard let existingIndex = pairings.firstIndex(where: { $0.pairingCode == normalized }) else {
+            apiMessage = "Pairing code was not found."
+            return false
+        }
+
+        var record = pairings[existingIndex]
+        record.elderID = session?.user.id
+        record.elderName = profile?.name ?? session?.user.name
+        record.updatedAt = Date()
+        pairings[existingIndex] = record
+        persistPairings()
+        syncPairingUIState()
+        return true
+    }
+
+    func loadEmergencyContacts() {
+        if let contacts = localDataStore.loadEmergencyContacts() {
+            emergencyContacts = contacts
+        }
+    }
+
+    func saveEmergencyContacts(_ contacts: [EmergencyContact]) {
+        emergencyContacts = contacts
+        persistEmergencyContacts()
+    }
+
+    func addEmergencyContact(_ contact: EmergencyContact) {
+        emergencyContacts.append(contact)
+        persistEmergencyContacts()
+    }
+
+    func updateEmergencyContact(_ contact: EmergencyContact) {
+        guard let index = emergencyContacts.firstIndex(where: { $0.id == contact.id }) else { return }
+        emergencyContacts[index] = contact
+        persistEmergencyContacts()
+    }
+
+    func deleteEmergencyContacts(ids: [UUID]) {
+        emergencyContacts.removeAll { ids.contains($0.id) }
+        persistEmergencyContacts()
+    }
+
+    func openFaceTime(using contact: FaceTimeContact? = nil) {
+        let target = contact ?? faceTimeContact()
+        guard let target else {
+            apiMessage = "Add a paired caregiver contact before starting FaceTime."
+            return
+        }
+        faceTimeService.open(address: target.address)
+    }
+
+    func faceTimeContact(for category: EmergencyContactCategory = .caregiver) -> FaceTimeContact? {
+        if let primary = currentFaceTimeContacts.first(where: { $0.isPrimary }) {
+            return primary
+        }
+
+        if let categorized = currentFaceTimeContacts.first(where: { $0.name.lowercased().contains(category.rawValue.lowercased()) }) {
+            return categorized
+        }
+
+        return currentFaceTimeContacts.first
+    }
+
+    func reminders(for elder: Elder?, on date: Date) -> [Reminder] {
+        guard let elder else { return [] }
+
+        return reminders.filter {
+            Calendar.current.isDate($0.date, inSameDayAs: date)
+                && $0.elderID == elder.id
+        }
     }
 
     func deleteElders(at offsets: IndexSet) {
@@ -429,11 +551,19 @@ class AppState: ObservableObject {
 
         persistElders()
         persistReminders()
+    }
 
-        if supabaseRepository.isAvailable {
-            Task {
-                _ = try? await supabaseRepository.removeElderAssignments(ids: removedIDs)
-            }
+    private func syncAppData(for role: UserRole?) async {
+        loadEmergencyContacts()
+        await loadProfile()
+        await loadPairings()
+        await loadElders()
+        await loadReminders(userID: session?.user.role == .children ? selectedElder?.id : session?.user.id)
+
+        if role == .children {
+            pairingCode = pairings.first(where: { $0.caregiverID == session?.user.id })?.pairingCode
+        } else {
+            pairingCode = nil
         }
     }
 
@@ -454,13 +584,89 @@ class AppState: ObservableObject {
         persistReminders()
     }
 
+    private func upsertPairing(_ record: PairingRecord) {
+        if let index = pairings.firstIndex(where: { $0.pairingCode == record.pairingCode }) {
+            pairings[index] = record
+        } else {
+            pairings.append(record)
+        }
+        persistPairings()
+    }
+
+    private func syncPairingUIState() {
+        if session?.user.role == .children {
+            pairingCode = pairings.first(where: { $0.caregiverID == session?.user.id })?.pairingCode
+            elders = pairings
+                .filter { $0.caregiverID == session?.user.id }
+                .filter { $0.elderID != nil }
+                .map {
+                    Elder(
+                        id: $0.elderID ?? $0.id,
+                        name: $0.elderName ?? "Paired Elder",
+                        avatar: nil
+                    )
+                }
+        } else {
+            pairingCode = nil
+        }
+        if session?.user.role == .children {
+            persistElders()
+        }
+    }
+
+    private func syncEldersFromPairings() {
+        guard session?.user.role == .children else {
+            elders = []
+            persistElders()
+            return
+        }
+
+        elders = pairings
+            .filter { $0.caregiverID == session?.user.id }
+            .filter { $0.elderID != nil }
+            .map {
+                Elder(
+                    id: $0.elderID ?? $0.id,
+                    name: $0.elderName ?? "Paired Elder",
+                    avatar: nil
+                )
+            }
+        persistElders()
+    }
+
     private func startAlertMonitoring() {
         guard alertTask == nil else { return }
         alertTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
-                alertCoordinator.processDueReminders(reminders, preferences: notificationPreferences)
+                await MainActor.run { [self] in
+                    alertCoordinator.processDueReminders(reminders, preferences: notificationPreferences)
+                }
                 try? await Task.sleep(for: .seconds(30))
+            }
+        }
+    }
+
+    private func addReminder(_ reminder: Reminder) {
+        reminders.append(reminder)
+        persistReminders()
+    }
+
+    private func updateReminder(_ reminder: Reminder) {
+        guard let index = reminders.firstIndex(where: { $0.id == reminder.id }) else { return }
+        reminders[index] = reminder
+        persistReminders()
+    }
+
+    private func removeReminderIDs(_ ids: [UUID]) {
+        reminders.removeAll { ids.contains($0.id) }
+        persistReminders()
+        Task {
+            for id in ids {
+                await notificationService.cancel(reminderID: id)
+                await MainActor.run {
+                    alertCoordinator.resetAlertState(for: id)
+                }
             }
         }
     }
@@ -471,5 +677,28 @@ class AppState: ObservableObject {
 
     private func persistElders() {
         localDataStore.saveElders(elders)
+    }
+
+    private func persistPairings() {
+        localDataStore.savePairings(pairings)
+    }
+
+    private func persistEmergencyContacts() {
+        localDataStore.saveEmergencyContacts(emergencyContacts)
+    }
+
+    private func rescheduleNotifications(for reminders: [Reminder]) async {
+        for reminder in reminders {
+            await notificationService.schedule(reminder: reminder)
+        }
+    }
+
+    private static func makePairingCode(length: Int = 6) -> String {
+        let alphabet = Array("ABCDEFGHJKLMNPQRSTUVWXYZ23456789")
+        var code = ""
+        while code.count < length {
+            code.append(alphabet.randomElement() ?? "A")
+        }
+        return code
     }
 }

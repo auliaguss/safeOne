@@ -32,6 +32,24 @@ struct DashboardView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 12)
 
+                let progress = appState.reminderProgress(on: selectedDate)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Progress")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Text("\(progress.completed)/\(progress.total)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    ProgressView(value: progress.fraction)
+                        .tint(.blue)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 12)
+
                 if isShowingCalendar {
                     DatePicker(
                         "Date",
@@ -56,7 +74,20 @@ struct DashboardView: View {
 
                 let reminders = appState.remindersForCurrentUser(on: selectedDate)
 
-                if reminders.isEmpty {
+                if appState.session?.user.role == .children && appState.elders.isEmpty {
+                    Spacer()
+                    VStack(spacing: 12) {
+                        Image(systemName: "person.crop.circle.badge.plus")
+                            .font(.system(size: 48))
+                            .foregroundColor(.blue)
+                        Text("Generate a pairing code in Profile to connect an elder.")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    Spacer()
+                } else if reminders.isEmpty {
                     Spacer()
                     VStack(spacing: 12) {
                         Image(systemName: "checkmark.circle")
