@@ -1,93 +1,47 @@
 import Combine
-import AuthenticationServices
 import Foundation
-
-private let sukarniID = UUID()
-private let jokoID = UUID()
 import SwiftUI
 
 @MainActor
 class AppState: ObservableObject {
-    
+
     // MARK: - Auth
     @Published var token: String? = nil
     @Published var currentUser: CurrentUser? = nil
-    
+    /// Set to true after an explicit logout so Onboarding skips the auto-sign-in check.
+    var didExplicitlyLogOut = false
+
     // MARK: - Global Incoming Call State
     @Published var incomingCall: IncomingCallData? = nil
     @Published var inActiveCall: Bool = false
     @Published var isAnsweredFromCallKit: Bool = false
-
     private var pollingTask: Task<Void, Never>? = nil
-    
-    // MARK: - Elders (local data)
-    @Published var session: AuthSession?
+
+    // MARK: - UI State
     @Published var isLoading = false
     @Published var apiMessage: String?
-    @Published var elders: [Elder] = [
-        Elder(id: sukarniID, name: "Sukarni"),
-        Elder(id: jokoID, name: "Joko")
-    ]
-    
-    @Published var reminders: [Reminder] = [
-        Reminder(
-            title: "Vitamin D",
-            notes: "1 Tablet",
-            date: Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date())!,
-            repeatOption: .everyday,
-            earlyReminder: .inTime,
-            category: .medication,
-            isCompleted: true,
-            completedCount: 1,
-            totalCount: 1,
-            elderID: sukarniID,
-            imageName: "💊"
-        ),
-        Reminder(
-            title: "Doctor Appointment",
-            notes: "",
-            date: Calendar.current.date(bySettingHour: 14, minute: 0, second: 0, of: Date())!,
-            repeatOption: .none,
-            earlyReminder: .none,
-            category: .appointment,
-            isCompleted: false,
-            completedCount: 0,
-            totalCount: 1,
-            elderID: sukarniID,
-            imageName: "🩺"
-        ),
-        Reminder(
-            title: "Antibiotics",
-            notes: "",
-            date: Calendar.current.date(bySettingHour: 9, minute: 5, second: 0, of: Date())!,
-            repeatOption: .everyday,
-            earlyReminder: .none,
-            category: .medication,
-            isCompleted: false,
-            completedCount: 1,
-            totalCount: 2,
-            elderID: sukarniID,
-            imageName: "💊"
-        ),
-        Reminder(
-            title: "Paracetamol",
-            notes: "",
-            date: Calendar.current.date(bySettingHour: 9, minute: 6, second: 0, of: Date())!,
-            repeatOption: .everyday,
-            earlyReminder: .none,
-            category: .medication,
-            isCompleted: false,
-            completedCount: 1,
-            totalCount: 2,
-            elderID: jokoID,
-            imageName: "💊"
-        )
-    ]
-    
+
+    // MARK: - Elders
+    @Published var elders: [Elder] = []
     @Published var selectedElderIndex: Int = 0
-    
-    // MARK: - Init (load token dari UserDefaults saat app launch)
+
+    // MARK: - Reminders
+    @Published var reminders: [Reminder] = []
+
+    // MARK: - Notification Preferences
+    @Published var notificationPreferences = NotificationPreferences(
+        sound: .default, hapticsEnabled: true, textToSpeechEnabled: true
+    )
+
+    // MARK: - Services
+    private let supabaseRepository = SupabaseRepository.shared
+    private let alertCoordinator = ReminderAlertCoordinator()
+    private let localDataStore = LocalDataStore()
+    private var alertTask: Task<Void, Never>?
+
+    // MARK: - Init
     init() {
+        // Restore auth session from UserDefaults
         if let savedToken = UserDefaults.standard.string(forKey: "jwt_token") {
             self.token = savedToken
         }
@@ -95,64 +49,19 @@ class AppState: ObservableObject {
            let user = try? JSONDecoder().decode(CurrentUser.self, from: userData) {
             self.currentUser = user
         }
-    }
-    
-    // MARK: - Auth Helpers
-    
-    /// Dipanggil setelah login berhasil (dari Onboarding)
-    func saveSession(token: String, user: CurrentUser) {
-        self.token = token
-        self.currentUser = user
-        UserDefaults.standard.set(token, forKey: "jwt_token")
-        if let encoded = try? JSONEncoder().encode(user) {
-            UserDefaults.standard.set(encoded, forKey: "current_user")
-        }
-    }
-    
-    /// Dipanggil saat logout
-    func clearSession() {
-        self.token = nil
-        self.currentUser = nil
-        self.stopPolling() // Matikan polling saat user logout
-        UserDefaults.standard.removeObject(forKey: "jwt_token")
-        UserDefaults.standard.removeObject(forKey: "current_user")
-    }
-    
-    var isLoggedIn: Bool {
-        token != nil && currentUser != nil
-    }
-    
-    var isElder: Bool {
-        currentUser?.role == "elder"
-    }
-    
-    var isChild: Bool {
-        currentUser?.role == "child"
-    }
-    
-    /// Token yang sudah di-unwrap, fallback ke empty string
-    var authToken: String {
-        token ?? ""
-    }
-    
-    // MARK: - Elder Helpers
-        @Published var profile: UserProfile?
 
-    private let authService = AuthService()
-    private let reminderService = ReminderService()
-    private let profileService = ProfileService()
-    private let supabaseRepository = SupabaseRepository.shared
-    private let alertCoordinator = ReminderAlertCoordinator()
-    private let localDataStore = LocalDataStore()
-    private var alertTask: Task<Void, Never>?
-
-    init() {
+        // Restore persisted data (local cache)
         if let savedElders = localDataStore.loadElders(), !savedElders.isEmpty {
             elders = savedElders
         }
-
         if let savedReminders = localDataStore.loadReminders() {
             reminders = savedReminders
+        }
+
+        // Restore notification preferences
+        if let data = UserDefaults.standard.data(forKey: "notification_prefs"),
+           let prefs = try? JSONDecoder().decode(NotificationPreferences.self, from: data) {
+            notificationPreferences = prefs
         }
 
         startAlertMonitoring()
@@ -162,99 +71,115 @@ class AppState: ObservableObject {
         alertTask?.cancel()
     }
 
+    // MARK: - Auth Helpers
+
+    var isLoggedIn: Bool {
+        token != nil && currentUser != nil
+    }
+
+    var isElder: Bool {
+        currentUser?.role == "elder"
+    }
+
+    var isChild: Bool {
+        currentUser?.role == "child"
+    }
+
+    /// JWT token for API requests
+    var authToken: String {
+        token ?? ""
+    }
+
+    /// Current user's UUID derived from device-login user ID
+    var currentUserUUID: UUID? {
+        currentUser.flatMap { UUID(uuidString: $0.id) }
+    }
+
+    /// Computed `UserProfile` for views that display profile data
+    var profile: UserProfile? {
+        guard let user = currentUser else { return nil }
+        let role: UserRole = user.role == "elder" ? .elder : .children
+        return UserProfile(
+            id: UUID(uuidString: user.id) ?? UUID(),
+            name: user.name,
+            email: nil,
+            role: role,
+            avatar: user.avatar,
+            connectedDevices: [],
+            notificationPreferences: notificationPreferences
+        )
+    }
+
+    func saveSession(token: String, user: CurrentUser) {
+        didExplicitlyLogOut = false
+        self.token = token
+        self.currentUser = user
+        UserDefaults.standard.set(token, forKey: "jwt_token")
+        if let encoded = try? JSONEncoder().encode(user) {
+            UserDefaults.standard.set(encoded, forKey: "current_user")
+        }
+    }
+
+    func clearSession() {
+        token = nil
+        currentUser = nil
+        elders = []
+        reminders = []
+        stopPolling()
+        alertTask?.cancel()
+        alertTask = nil
+        UserDefaults.standard.removeObject(forKey: "jwt_token")
+        UserDefaults.standard.removeObject(forKey: "current_user")
+    }
+
+    func logout() async {
+        didExplicitlyLogOut = true
+        clearSession()
+    }
+
+    // MARK: - Profile
+
+    /// No-op: profile is derived from `currentUser` and doesn't need a remote fetch.
+    func loadProfile() async {}
+
+    func updateNotificationPreferences(_ preferences: NotificationPreferences) async {
+        notificationPreferences = preferences
+        if let encoded = try? JSONEncoder().encode(preferences) {
+            UserDefaults.standard.set(encoded, forKey: "notification_prefs")
+        }
+    }
+
+    func loadConnectedDevices() async -> [ConnectedDevice] {
+        return profile?.connectedDevices ?? []
+    }
+
+    // MARK: - Elder Helpers
+
     var selectedElder: Elder? {
         guard elders.indices.contains(selectedElderIndex) else { return nil }
         return elders[selectedElderIndex]
     }
 
-    var activeToken: String? {
-        session?.accessToken
-    }
-
-    var notificationPreferences: NotificationPreferences {
-        profile?.notificationPreferences
-            ?? session?.user.notificationPreferences
-            ?? NotificationPreferences(sound: .default, hapticsEnabled: true, textToSpeechEnabled: true)
-    }
-
-    func restoreSession() async {
-        guard session == nil else { return }
-        if let restoredSession = authService.restoreSession() {
-            session = restoredSession
-            profile = restoredSession.user
-            startAlertMonitoring()
-            await loadProfile()
-            await loadElders()
-            await loadDashboardReminders(for: Date())
-        }
-    }
-
-    func signInWithApple(credential: ASAuthorizationAppleIDCredential, role: UserRole, nonce: String? = nil) async {
-        isLoading = true
-        defer { isLoading = false }
-
-        do {
-            let newSession = try await authService.signInWithApple(credential: credential, role: role, nonce: nonce)
-            apply(session: newSession)
-            await loadProfile()
-            await loadElders()
-            await loadDashboardReminders(for: Date())
-        } catch {
-            apiMessage = error.localizedDescription
-        }
-    }
-
-    func signInLocally(role: UserRole) async {
-        apply(session: authService.signInLocally(role: role))
-        await loadDashboardReminders(for: Date())
-    }
-
-    func logout() async {
-        let token = activeToken
-        await authService.logout(token: token)
-        session = nil
-        profile = nil
-        alertTask?.cancel()
-        alertTask = nil
-    }
+    // MARK: - Reminder Loading
 
     func loadDashboardReminders(for date: Date) async {
-        let userID: UUID?
-        switch session?.user.role {
-        case .children:
-            userID = selectedElder?.id
-        case .elder:
-            userID = session?.user.id
-        case nil:
-            userID = nil
-        }
-
-        await loadReminders(date: date, userID: userID)
+        let userID = isChild ? selectedElder?.id : currentUserUUID
+        await loadReminders(userID: userID)
     }
 
-    func loadReminders(date: Date? = nil, startDate: Date? = nil, endDate: Date? = nil, userID: UUID? = nil) async {
-        if supabaseRepository.isAvailable {
-            do {
-                let backendReminders = try await supabaseRepository.loadReminders(userID: userID)
-                merge(reminders: backendReminders)
-                return
-            } catch {
-                apiMessage = "Supabase reminders are not ready yet. Using local reminder data."
-            }
-        }
+    func loadReminders(date: Date? = nil, userID: UUID? = nil) async {
+        let effectiveUserID = userID ?? currentUserUUID
+        guard let effectiveUserID else { return }
 
         do {
-            let backendReminders = try await reminderService.getReminders(
-                filter: ReminderFilter(date: date, startDate: startDate, endDate: endDate, userID: userID),
-                token: activeToken
-            )
-            merge(reminders: backendReminders)
-        } catch APIError.backendNotConfigured {
-            apiMessage = "Using local reminder data until backend is configured."
+            let fetched = try await supabaseRepository.loadReminders(userID: effectiveUserID)
+            merge(reminders: fetched)
         } catch {
             apiMessage = error.localizedDescription
         }
     }
+
+    // MARK: - Reminder CRUD
 
     func addReminder(_ reminder: Reminder) {
         reminders.append(reminder)
@@ -262,21 +187,14 @@ class AppState: ObservableObject {
     }
 
     func createReminder(_ reminder: Reminder) async {
-        if supabaseRepository.isAvailable {
-            do {
-                let created = try await supabaseRepository.upsertReminder(reminder)
-                addReminder(created)
-                return
-            } catch {
-                apiMessage = "Supabase reminder save failed. Using local data."
-            }
+        guard let userID = currentUserUUID else {
+            addReminder(reminder)
+            return
         }
 
         do {
-            let created = try await reminderService.addReminder(reminder, token: activeToken)
+            let created = try await supabaseRepository.upsertReminder(reminder, createdBy: userID)
             addReminder(created)
-        } catch APIError.backendNotConfigured {
-            addReminder(reminder)
         } catch {
             apiMessage = error.localizedDescription
             addReminder(reminder)
@@ -290,22 +208,19 @@ class AppState: ObservableObject {
     }
 
     func saveReminder(_ reminder: Reminder) async {
-        if reminders.contains(where: { $0.id == reminder.id }) {
-            if supabaseRepository.isAvailable {
-                do {
-                    let updated = try await supabaseRepository.upsertReminder(reminder)
-                    updateReminder(updated)
-                    return
-                } catch {
-                    apiMessage = "Supabase reminder update failed. Using local data."
-                }
-            }
-
-            do {
-                let updated = try await reminderService.editReminder(reminder, token: activeToken)
-                updateReminder(updated)
-            } catch APIError.backendNotConfigured {
+        guard let userID = currentUserUUID else {
+            if reminders.contains(where: { $0.id == reminder.id }) {
                 updateReminder(reminder)
+            } else {
+                addReminder(reminder)
+            }
+            return
+        }
+
+        if reminders.contains(where: { $0.id == reminder.id }) {
+            do {
+                let updated = try await supabaseRepository.upsertReminder(reminder, createdBy: userID)
+                updateReminder(updated)
             } catch {
                 apiMessage = error.localizedDescription
                 updateReminder(reminder)
@@ -316,139 +231,44 @@ class AppState: ObservableObject {
     }
 
     func deleteReminders(ids: [UUID]) async {
-        if supabaseRepository.isAvailable {
-            do {
-                try await supabaseRepository.deleteReminders(ids: ids)
-                reminders.removeAll { ids.contains($0.id) }
-                persistReminders()
-                return
-            } catch {
-                apiMessage = "Supabase reminder delete failed. Using local data."
-            }
-        }
-
         do {
-            try await reminderService.deleteReminders(ids: ids, token: activeToken)
-            reminders.removeAll { ids.contains($0.id) }
-            persistReminders()
-        } catch APIError.backendNotConfigured {
-            reminders.removeAll { ids.contains($0.id) }
-            persistReminders()
+            try await supabaseRepository.deleteReminders(ids: ids)
         } catch {
             apiMessage = error.localizedDescription
         }
+        reminders.removeAll { ids.contains($0.id) }
+        persistReminders()
     }
 
     func reminders(for elder: Elder?, on date: Date) -> [Reminder] {
         guard let elder else { return [] }
-
         return reminders.filter {
-            Calendar.current.isDate($0.date, inSameDayAs: date)
-                && $0.elderID == elder.id
+            Calendar.current.isDate($0.date, inSameDayAs: date) && $0.elderID == elder.id
         }
     }
 
     func remindersForCurrentUser(on date: Date) -> [Reminder] {
-        switch session?.user.role {
-        case .elder:
+        if isElder {
             return reminders.filter { Calendar.current.isDate($0.date, inSameDayAs: date) }
-        case .children:
+        } else if isChild {
             return reminders(for: selectedElder, on: date)
-        case nil:
-            return []
         }
+        return []
     }
 
-    func loadProfile() async {
-        if supabaseRepository.isAvailable {
-            do {
-                let backendProfile = try await supabaseRepository.loadProfile(roleFallback: session?.user.role ?? .children)
-                let devices = try await supabaseRepository.loadConnectedDevices()
-                profile = backendProfile
-                profile?.connectedDevices = devices
-                session?.user = backendProfile
-                session?.user.connectedDevices = devices
-                await loadElders()
-                return
-            } catch {
-                apiMessage = "Supabase profile sync failed. Using local profile data."
-            }
-        }
-
-        do {
-            let backendProfile = try await profileService.getProfile(token: activeToken)
-            profile = backendProfile
-            session?.user = backendProfile
-        } catch APIError.backendNotConfigured {
-            profile = session?.user
-        } catch {
-            apiMessage = error.localizedDescription
-        }
-    }
-
-    func updateNotificationPreferences(_ preferences: NotificationPreferences) async {
-        guard var currentProfile = profile ?? session?.user else { return }
-        currentProfile.notificationPreferences = preferences
-
-        if supabaseRepository.isAvailable {
-            do {
-                let updated = try await supabaseRepository.upsertProfile(currentProfile)
-                profile = updated
-                session?.user = updated
-                return
-            } catch {
-                apiMessage = "Supabase profile update failed. Using local profile data."
-            }
-        }
-
-        do {
-            let updated = try await profileService.updateProfile(currentProfile, token: activeToken)
-            profile = updated
-            session?.user = updated
-        } catch APIError.backendNotConfigured {
-            profile = currentProfile
-            session?.user = currentProfile
-        } catch {
-            apiMessage = error.localizedDescription
-            profile = currentProfile
-            session?.user = currentProfile
-        }
-    }
-
-    func loadConnectedDevices() async -> [ConnectedDevice] {
-        if supabaseRepository.isAvailable {
-            do {
-                let devices = try await supabaseRepository.loadConnectedDevices()
-                profile?.connectedDevices = devices
-                session?.user.connectedDevices = devices
-                return devices
-            } catch {
-                apiMessage = "Supabase device sync failed. Using local device data."
-            }
-        }
-
-        do {
-            let devices = try await profileService.getConnectedDevices(token: activeToken)
-            profile?.connectedDevices = devices
-            session?.user.connectedDevices = devices
-            return devices
-        } catch {
-            return profile?.connectedDevices ?? session?.user.connectedDevices ?? []
-        }
-    }
+    // MARK: - Elder Management
 
     func loadElders() async {
-        if supabaseRepository.isAvailable {
-            do {
-                let backendElders = try await supabaseRepository.loadElders()
-                if !backendElders.isEmpty {
-                    elders = backendElders
-                    persistElders()
-                }
-                return
-            } catch {
-                apiMessage = "Supabase elder sync failed. Using local elder data."
+        guard let userID = currentUserUUID, isChild else { return }
+
+        do {
+            let fetched = try await supabaseRepository.loadElders(caregiverID: userID)
+            if !fetched.isEmpty {
+                elders = fetched
+                persistElders()
             }
+        } catch {
+            apiMessage = "Elder sync failed. Using local data."
         }
     }
 
@@ -456,25 +276,25 @@ class AppState: ObservableObject {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
 
-        if supabaseRepository.isAvailable {
-            Task {
-                do {
-                    let newElder = try await supabaseRepository.createElder(name: trimmedName)
-                    elders.append(newElder)
-                    persistElders()
-                } catch {
-                    apiMessage = "Supabase elder creation failed. Using local elder data."
-                    let newElder = Elder(name: trimmedName)
-                    elders.append(newElder)
-                    persistElders()
-                }
-            }
+        guard let userID = currentUserUUID else {
+            let newElder = Elder(name: trimmedName)
+            elders.append(newElder)
+            persistElders()
             return
         }
 
-        let newElder = Elder(name: trimmedName)
-        elders.append(newElder)
-        persistElders()
+        Task {
+            do {
+                let newElder = try await supabaseRepository.createElder(name: trimmedName, caregiverID: userID)
+                elders.append(newElder)
+                persistElders()
+            } catch {
+                apiMessage = "Elder creation failed. Adding locally."
+                let newElder = Elder(name: trimmedName)
+                elders.append(newElder)
+                persistElders()
+            }
+        }
     }
 
     func deleteElders(at offsets: IndexSet) {
@@ -495,18 +315,14 @@ class AppState: ObservableObject {
         persistElders()
         persistReminders()
 
-        if supabaseRepository.isAvailable {
+        if let userID = currentUserUUID {
             Task {
-                _ = try? await supabaseRepository.removeElderAssignments(ids: removedIDs)
+                _ = try? await supabaseRepository.removeElderAssignments(ids: removedIDs, caregiverID: userID)
             }
         }
     }
 
-    private func apply(session newSession: AuthSession) {
-        session = newSession
-        profile = newSession.user
-        startAlertMonitoring()
-    }
+    // MARK: - Private Helpers
 
     private func merge(reminders backendReminders: [Reminder]) {
         for reminder in backendReminders {
@@ -537,56 +353,47 @@ class AppState: ObservableObject {
     private func persistElders() {
         localDataStore.saveElders(elders)
     }
-    
-    // MARK: - Global Polling Helpers
-    
+
+    // MARK: - Global Polling (Calls)
+
     func startPolling() {
-        guard isChild else { return } // Pastikan hanya role child/caregiver yang memanggil
-        
+        guard isChild else { return }
         pollingTask?.cancel()
         pollingTask = Task {
             while !Task.isCancelled {
                 await checkIncomingCall()
-                try? await Task.sleep(nanoseconds: 3_000_000_000) // Polling setiap 3 detik
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
             }
         }
     }
-    
+
     func stopPolling() {
         pollingTask?.cancel()
         pollingTask = nil
     }
-    
+
     private func checkIncomingCall() async {
-        // Jangan polling jika sedang ada call
         guard !inActiveCall, incomingCall == nil else { return }
-        
         guard let token = self.token else { return }
         guard let url = URL(string: "https://safe-one-backend.vercel.app/api/calls/pending") else { return }
-        
+
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
+
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return }
-            
+
             let decoded = try JSONDecoder().decode(PendingCallResponse.self, from: data)
-            
-            await MainActor.run {
-                if let call = decoded.call {
-                    // Hanya set jika belum ada call
-                    if self.incomingCall == nil && !self.inActiveCall {
-                        self.incomingCall = IncomingCallData(
-                            callId: call.callId,
-                            elderName: call.elderName,
-                            channelName: call.channelName,
-                            agoraToken: call.agoraToken,
-                            agoraAppId: call.agoraAppId
-                        )
-                    }
-                }
-                // ← HAPUS blok else — jangan pernah nil-kan dari sini
+
+            if let call = decoded.call, incomingCall == nil, !inActiveCall {
+                incomingCall = IncomingCallData(
+                    callId: call.callId,
+                    elderName: call.elderName,
+                    channelName: call.channelName,
+                    agoraToken: call.agoraToken,
+                    agoraAppId: call.agoraAppId
+                )
             }
         } catch {
             print("❌ Polling error: \(error)")
@@ -622,7 +429,7 @@ struct PendingCall: Codable {
     let channelName: String
     let agoraToken: String
     let agoraAppId: String
-    
+
     enum CodingKeys: String, CodingKey {
         case callId      = "callId"
         case elderName   = "elderName"

@@ -65,7 +65,6 @@ final class AuthService {
                 )
 
                 save(session)
-                _ = try? await SupabaseRepository.shared.upsertProfile(profile)
                 return session
             } catch {
                 // Fall back to the current development flow if Supabase auth is not ready yet.

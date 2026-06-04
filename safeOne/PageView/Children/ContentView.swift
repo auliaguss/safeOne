@@ -9,6 +9,8 @@ import SwiftUI
 import AVFoundation
 
 struct ContentView: View {
+    @EnvironmentObject var appState: AppState
+
     var body: some View {
         TabView {
             Tab("Dashboard", systemImage: "checklist") {

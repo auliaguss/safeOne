@@ -1,5 +1,17 @@
 import Foundation
 
+enum UserRole: String, Codable, CaseIterable {
+    case elder = "elder"
+    case children = "children"
+
+    var displayName: String {
+        switch self {
+        case .elder: return "Elder"
+        case .children: return "Children"
+        }
+    }
+}
+
 struct AuthSession: Codable, Equatable {
     var accessToken: String
     var refreshToken: String?

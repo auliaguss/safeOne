@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		21712A962FD158120012801F /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 21712A952FD158120012801F /* Auth */; };
+		21712A982FD158120012801F /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 21712A972FD158120012801F /* Functions */; };
+		21712A9A2FD158120012801F /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 21712A992FD158120012801F /* PostgREST */; };
+		21712A9C2FD158120012801F /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 21712A9B2FD158120012801F /* Realtime */; };
+		21712A9E2FD158120012801F /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 21712A9D2FD158120012801F /* Storage */; };
+		21712AA02FD158120012801F /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 21712A9F2FD158120012801F /* Supabase */; };
 		A142BD022FD040840000D46F /* AIAEC in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD012FD040840000D46F /* AIAEC */; };
 		A142BD042FD040840000D46F /* AIAECLL in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD032FD040840000D46F /* AIAECLL */; };
 		A142BD062FD040840000D46F /* AINS in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD052FD040840000D46F /* AINS */; };
@@ -56,9 +62,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				21712A9C2FD158120012801F /* Realtime in Frameworks */,
 				A142BD162FD040840000D46F /* ReplayKit in Frameworks */,
+				21712A9E2FD158120012801F /* Storage in Frameworks */,
+				21712AA02FD158120012801F /* Supabase in Frameworks */,
 				A142BD0C2FD040840000D46F /* ClearVision in Frameworks */,
+				21712A962FD158120012801F /* Auth in Frameworks */,
 				A142BD042FD040840000D46F /* AIAECLL in Frameworks */,
+				21712A9A2FD158120012801F /* PostgREST in Frameworks */,
 				A142BD1A2FD040840000D46F /* SpatialAudio in Frameworks */,
 				A142BD0E2FD040840000D46F /* ContentInspect in Frameworks */,
 				A142BD1C2FD040840000D46F /* VQA in Frameworks */,
@@ -66,6 +77,7 @@
 				A142BD222FD040840000D46F /* VirtualBackground in Frameworks */,
 				A142BD1E2FD040840000D46F /* VideoAv1CodecEnc in Frameworks */,
 				A142BD202FD040840000D46F /* VideoCodecEnc in Frameworks */,
+				21712A982FD158120012801F /* Functions in Frameworks */,
 				A142BD082FD040840000D46F /* AINSLL in Frameworks */,
 				A142BD022FD040840000D46F /* AIAEC in Frameworks */,
 				A142BD0A2FD040840000D46F /* AudioBeauty in Frameworks */,
@@ -132,6 +144,12 @@
 				A142BD1D2FD040840000D46F /* VideoAv1CodecEnc */,
 				A142BD1F2FD040840000D46F /* VideoCodecEnc */,
 				A142BD212FD040840000D46F /* VirtualBackground */,
+				21712A952FD158120012801F /* Auth */,
+				21712A972FD158120012801F /* Functions */,
+				21712A992FD158120012801F /* PostgREST */,
+				21712A9B2FD158120012801F /* Realtime */,
+				21712A9D2FD158120012801F /* Storage */,
+				21712A9F2FD158120012801F /* Supabase */,
 			);
 			productName = safeOne;
 			productReference = 219E090D2FBD7FC000118AB9 /* safeOne.app */;
@@ -163,6 +181,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */,
+				21712A942FD158120012801F /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 219E090E2FBD7FC000118AB9 /* Products */;
@@ -414,6 +433,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		21712A942FD158120012801F /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase-community/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
 		A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/AgoraIO/AgoraRtcEngine_iOS";
@@ -425,6 +452,36 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		21712A952FD158120012801F /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 21712A942FD158120012801F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		21712A972FD158120012801F /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 21712A942FD158120012801F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		21712A992FD158120012801F /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 21712A942FD158120012801F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		21712A9B2FD158120012801F /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 21712A942FD158120012801F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		21712A9D2FD158120012801F /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 21712A942FD158120012801F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		21712A9F2FD158120012801F /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 21712A942FD158120012801F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
 		A142BD012FD040840000D46F /* AIAEC */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;

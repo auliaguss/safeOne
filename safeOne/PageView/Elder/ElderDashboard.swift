@@ -136,6 +136,94 @@ struct ElderDashboard: View {
 }
 
 
+// MARK: - Row Views
+
+struct ElderEventRow: View {
+    let reminder: Reminder
+    let onTap: () -> Void
+
+    private var timeText: String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f.string(from: reminder.date)
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 14) {
+                Text(reminder.imageName ?? "📅")
+                    .font(.system(size: 32))
+                    .frame(width: 52, height: 52)
+                    .background(Color.blue.opacity(0.1))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(reminder.title)
+                        .font(.system(.body, design: .rounded))
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Text(reminder.notes.isEmpty ? reminder.category.rawValue : reminder.notes)
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Text(timeText)
+                    .font(.system(.subheadline, design: .rounded))
+                    .fontWeight(.medium)
+                    .foregroundColor(Color(hex: "007AFF"))
+            }
+            .padding(16)
+            .background(Color(.systemBackground))
+            .cornerRadius(14)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct ElderReminderRow: View {
+    let reminder: Reminder
+    let onTap: () -> Void
+
+    private var timeText: String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f.string(from: reminder.date)
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 14) {
+                ReminderImageView(imageName: reminder.imageName)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(reminder.title)
+                        .font(.system(.body, design: .rounded))
+                        .fontWeight(.semibold)
+                        .foregroundColor(reminder.isCompleted ? .secondary : .primary)
+                    Text(timeText)
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                if reminder.isCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.title2)
+                }
+            }
+            .padding(16)
+            .background(Color(.systemBackground))
+            .cornerRadius(14)
+            .opacity(reminder.isCompleted ? 0.6 : 1.0)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 #Preview {
     ElderDashboard()
 }
