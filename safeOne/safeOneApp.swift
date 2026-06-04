@@ -1,10 +1,3 @@
-//
-//  safeOneApp.swift
-//  safeOne
-//
-//  Created by Aulia Agus on 20/05/26.
-//
-
 import SwiftUI
 
 @main

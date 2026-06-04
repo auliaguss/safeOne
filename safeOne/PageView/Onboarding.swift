@@ -1,8 +1,6 @@
-//
-//  Onboarding.swift
-//  safeOne
-//
-
+import AuthenticationServices
+import CryptoKit
+import Security
 import SwiftUI
 import UIKit
 
@@ -15,8 +13,209 @@ struct Onboarding: View {
     @State private var isLoading = false
     @State private var isCheckingUser = true // Menandakan sedang cek user otomatis
     @State private var errorMessage: String? = nil
+    @State private var selectedRole: UserRole?
+    @State private var currentNonce: String?
 
     var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color.white,
+                    Color.cyan.opacity(0.15),
+                    Color.blue.opacity(0.12)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            
+            .ignoresSafeArea()
+
+            VStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "shield.checkered")
+
+                    Text("SafeOne+")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                }
+                .padding(.top, 60)
+
+                Spacer()
+
+                ZStack {
+                    Circle()
+                        .stroke(Color.white.opacity(0.7), lineWidth: 5)
+                        .frame(width: 180, height: 177)
+
+                    Circle()
+                        .stroke(Color.white.opacity(0.7), lineWidth: 3)
+                        .frame(width: 320, height: 320)
+
+                    Circle()
+                        .stroke(Color.white.opacity(0.7), lineWidth: 3)
+                        .frame(width: 500, height: 500)
+
+                    Text("👵🏻")
+                        .font(.system(size: 50))
+                        .frame(width: 177, height: 177)
+                        .background(Color.cyan.opacity(0.2))
+                        .clipShape(Circle())
+
+                    Text("❤️")
+                        .font(.system(size: 30))
+                        .offset(x: 100, y: -230)
+
+                    Text("👨🏻‍🦱")
+                        .font(.system(size: 45))
+                        .padding(10)
+                        .background(Color.white.opacity(0.9))
+                        .clipShape(Circle())
+                        .offset(x: -90, y: -230)
+
+                    Text("💊")
+                        .font(.system(size: 35))
+                        .offset(x: -125, y: -90)
+
+                    Text("👨🏻‍🦱")
+                        .font(.system(size: 45))
+                        .padding(10)
+                        .background(Color.white.opacity(0.9))
+                        .clipShape(Circle())
+                        .offset(x: 130, y: -105)
+
+                    Text("⏰")
+                        .font(.system(size: 30))
+                        .offset(x: 90, y: 120)
+
+                    Text("👨🏻‍🦱")
+                        .font(.system(size: 45))
+                        .padding(10)
+                        .background(Color.white.opacity(0.9))
+                        .clipShape(Circle())
+                        .offset(x: -90, y: 130)
+                }
+                .frame(height: 400)
+
+                Spacer()
+
+                VStack(spacing: 12) {
+                    Text("Select your role")
+                        .fontWeight(.semibold)
+
+                    HStack(spacing: 12) {
+                        roleButton(title: "Elder", systemImage: "heart.text.square.fill", role: .elder)
+                        roleButton(title: "Caregiver", systemImage: "person.2.fill", role: .children)
+                    }
+
+                    SignInWithAppleButton(.signIn) { request in
+                        request.requestedScopes = [.fullName, .email]
+                        let nonce = Self.randomNonceString()
+                        currentNonce = nonce
+                        request.nonce = Self.sha256(nonce)
+                    } onCompletion: { result in
+                        guard let selectedRole else { return }
+                        let nonce = currentNonce
+
+                        switch result {
+                        case .success(let authorization):
+                            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                                appState.apiMessage = "Apple sign-in failed."
+                                return
+                            }
+
+                            Task {
+                                await appState.signInWithApple(
+                                    credential: credential,
+                                    role: selectedRole,
+                                    nonce: nonce
+                                )
+                                currentNonce = nil
+                            }
+                        case .failure(let error):
+                            appState.apiMessage = error.localizedDescription
+                        }
+                    }
+                    .signInWithAppleButtonStyle(.black)
+                    .frame(maxWidth: 375)
+                    .frame(height: 48)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .disabled(selectedRole == nil)
+                    .opacity(selectedRole == nil ? 0.55 : 1.0)
+
+                    Button {
+                        guard let selectedRole else { return }
+                        Task {
+                            await appState.signInLocally(role: selectedRole)
+                        }
+                    } label: {
+                        Text("Continue without Apple")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 48)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.blue)
+                    .disabled(selectedRole == nil)
+
+                    Text("If Apple sign-in fails, use the local demo login to keep testing.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 28)
+            }
+        }
+    }
+
+    private func roleButton(title: String, systemImage: String, role: UserRole) -> some View {
+        Button {
+            selectedRole = role
+        } label: {
+            VStack(spacing: 10) {
+                Image(systemName: systemImage)
+                    .font(.title2)
+
+                Text(title)
+                    .fontWeight(.semibold)
+            }
+            .foregroundColor(selectedRole == role ? .white : .blue)
+            .frame(maxWidth: .infinity)
+            .frame(height: 88)
+            .background(selectedRole == role ? Color.blue : Color.white.opacity(0.85))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(Color.blue.opacity(0.8), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+        }
+    }
+
+    private static func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remainingLength = length
+
+        while remainingLength > 0 {
+            let randoms: [UInt8] = (0 ..< 16).map { _ in
+                var random: UInt8 = 0
+                let errorCode = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
+                if errorCode != errSecSuccess {
+                    fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)")
+                }
+                return random
+            }
+
+            randoms.forEach { random in
+                if remainingLength == 0 {
+                    return
+                }
+
+                if random < charset.count {
+                    result.append(charset[Int(random)])
+                    remainingLength -= 1
+                }
         NavigationStack {
             ZStack {
                 LinearGradient(

@@ -1,24 +1,22 @@
-//
-//  ElderReminderModalView.swift
-//  safeOne
-//
-//  Created by Fransiskus Risky Gawahi on 29/05/26.
-//
-
 import SwiftUI
 
 struct ElderReminderModalView: View {
-    @Environment(\.dismiss) var dismiss
-    let reminder: ReminderItem
+    @Environment(\.dismiss) private var dismiss
+    let reminder: Reminder
+
+    private var timeText: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: reminder.date)
+    }
     
     var body: some View {
-        NavigationStack{
+        NavigationStack {
             ZStack {
                 Color.white
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Close-Cross button on top right
                     HStack {
                         Spacer()
                         Button(action: { dismiss() }) {
@@ -35,48 +33,51 @@ struct ElderReminderModalView: View {
                     
                     Spacer()
                     
-                    // Huge Circle pill image
                     ZStack {
                         Circle()
                             .fill(Color(hex: "F2F2F7"))
                             .frame(width: 260, height: 260)
                         
-                        //  placeholder icon/emoji
-                        Text("💊")
-                            .font(.system(size: 110))
+                        if let fileName = ReminderImageReference.fileName(from: reminder.imageName),
+                           let image = LocalImageStore.load(fileName: fileName) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 260, height: 260)
+                                .clipShape(Circle())
+                        } else {
+                            Text(reminder.imageName ?? "💊")
+                                .font(.system(size: 110))
+                        }
                     }
                     .padding(.bottom, 30)
                     
-                    // Detail pill info
                     VStack(spacing: 8) {
                         Text(reminder.title)
                             .font(.system(size: 34, weight: .bold, design: .rounded))
                             .foregroundColor(.black)
                         
-                        Text(reminder.dosage)
+                        Text(reminder.notes.isEmpty ? reminder.category.rawValue : reminder.notes)
                             .font(.system(size: 28, weight: .medium, design: .rounded))
                             .foregroundColor(.gray)
                         
-                        Text(reminder.instruction)
+                        Text(reminder.repeatOption.rawValue)
                             .font(.system(size: 20, weight: .regular, design: .rounded))
                             .foregroundColor(.gray)
                     }
                     
                     Spacer()
                     
-                    // Blue time directory
                     HStack(spacing: 8) {
                         Image(systemName: "clock.fill")
                             .foregroundColor(Color(hex: "007AFF"))
-                        Text(reminder.time)
+                        Text(timeText)
                             .font(.system(size: 22, weight: .bold, design: .rounded))
                             .foregroundColor(Color(hex: "007AFF"))
                     }
                     .padding(.bottom, 30)
                     
-                    // Group Action Buttons
                     VStack(spacing: 12) {
-                        // Button Snooze on 10 mins
                         Button(action: { dismiss() }) {
                             Text("Snooze on 10 mins")
                                 .font(.system(.headline, design: .rounded))
@@ -91,7 +92,6 @@ struct ElderReminderModalView: View {
                                 )
                         }
                         
-                        // Button Done
                         Button(action: { dismiss() }) {
                             Text("Done")
                                 .font(.system(.headline, design: .rounded))
@@ -108,6 +108,6 @@ struct ElderReminderModalView: View {
                 }
             }
         }
-        .navigationBarHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
     }
 }

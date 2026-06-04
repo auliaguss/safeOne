@@ -1,13 +1,4 @@
-//
-//  Sharedcomponents.swift
-//  ElderCareApp
-//
-//  Created by Hercio Venceslau Silla on 28/05/26.
-//
-
 import SwiftUI
-
-// MARK: - Elder Selector
 
 struct ElderSelectorView: View {
     @EnvironmentObject var appState: AppState
@@ -37,16 +28,13 @@ struct ElderSelectorView: View {
             }
             Spacer()
         }
-        .onChange(of: appState.elders.count) { newCount in
-            // Guard selectedElderIndex if elders shrink
-            if appState.selectedElderIndex >= newCount {
-                appState.selectedElderIndex = max(0, newCount - 1)
+        .onChange(of: appState.elders.count) {
+            if appState.selectedElderIndex >= appState.elders.count {
+                appState.selectedElderIndex = max(0, appState.elders.count - 1)
             }
         }
     }
 }
-
-// MARK: - Section Header
 
 struct SectionHeader: View {
     let title: String
@@ -63,8 +51,6 @@ struct SectionHeader: View {
         }
     }
 }
-
-// MARK: - Form Row Display (read-only)
 
 struct FormRowDisplay: View {
     let label: String

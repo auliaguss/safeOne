@@ -1,25 +1,12 @@
-//
-//  Profile.swift
-//  safeOne
-//
-//  Created by Aulia Agus on 26/05/26.
-//
-
 import SwiftUI
-
-// MARK: - Profile View
 
 struct ElderProfileView: View {
     @EnvironmentObject var appState: AppState
-    @State private var hapticsEnabled: Bool = true
-    @State private var textToSpeechEnabled: Bool = true
-    @State private var goToOnboarding = false
-    @State private var soundsDefault: String = "Default"
-    
+    @State private var preferences = NotificationPreferences(sound: .default, hapticsEnabled: true, textToSpeechEnabled: true)
+
     var body: some View {
         NavigationStack {
             List {
-                // Profile Header
                 Section {
                     HStack(spacing: 14) {
                         ZStack {
@@ -31,50 +18,56 @@ struct ElderProfileView: View {
                                 .foregroundColor(.white)
                         }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Sukarni")
+                            Text(appState.profile?.name ?? "Sukarni")
                                 .font(.headline)
-                            Text("Elder")
+                            Text(appState.profile?.role.displayName ?? "Elder")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
                     }
                     .padding(.vertical, 4)
                 }
-                
-                // Account
+
                 Section("Account") {
                     NavigationLink("Family") {
                         Text("Family")
                             .navigationTitle("Family")
                     }
                     NavigationLink("Connected Devices") {
-                        Text("Connected Devices")
-                            .navigationTitle("Connected Devices")
+                        ConnectedDevicesView()
                     }
                     NavigationLink("Health Information") {
                         Text("Health Information")
                             .navigationTitle("Health Information")
                     }
                 }
-                
-                // Notification
+
                 Section("Notification") {
-                    HStack {
-                        Text("Sounds")
-                        Spacer()
-                        Text(soundsDefault)
-                            .foregroundColor(.secondary)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                    Menu {
+                        ForEach(AlertSound.allCases, id: \.self) { sound in
+                            Button(sound.rawValue) {
+                                preferences.sound = sound
+                                savePreferences()
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text("Sounds")
+                            Spacer()
+                            Text(preferences.sound.rawValue)
+                                .foregroundColor(.secondary)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     
-                    Toggle("Haptics", isOn: $hapticsEnabled)
-                    Toggle("Text To Speech", isOn: $textToSpeechEnabled)
-                    
+                    Toggle("Haptics", isOn: $preferences.hapticsEnabled)
+                        .onChange(of: preferences.hapticsEnabled) { savePreferences() }
+                    Toggle("Text To Speech", isOn: $preferences.textToSpeechEnabled)
+                        .onChange(of: preferences.textToSpeechEnabled) { savePreferences() }
                 }
-                
-                // General
+
                 Section("General") {
                     NavigationLink("Emergency Services") {
                         Text("Emergency Services")
@@ -84,10 +77,12 @@ struct ElderProfileView: View {
                         Text("Data & Privacy")
                             .navigationTitle("Data & Privacy")
                     }
-                    
                 }
+
                 Button {
-                    goToOnboarding = true
+                    Task {
+                        await appState.logout()
+                    }
                 } label: {
                     Text("Logout")
                         .foregroundColor(.white)
@@ -98,12 +93,18 @@ struct ElderProfileView: View {
                 }
                 .padding()
             }
-            .navigationDestination(isPresented: $goToOnboarding) {
-                Onboarding()
-            }
-            
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
+            .task {
+                await appState.loadProfile()
+                preferences = appState.notificationPreferences
+            }
+        }
+    }
+
+    private func savePreferences() {
+        Task {
+            await appState.updateNotificationPreferences(preferences)
         }
     }
 }
@@ -111,4 +112,5 @@ struct ElderProfileView: View {
 
 #Preview {
     ElderProfileView()
+        .environmentObject(AppState())
 }

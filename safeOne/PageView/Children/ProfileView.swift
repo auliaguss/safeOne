@@ -1,26 +1,13 @@
-//
-//  ProfileView.swift
-//  ElderCareApp
-//
-//  Created by Hercio Venceslau Silla on 28/05/26.
-//
-
 import SwiftUI
-
-// MARK: - Profile View
 
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
-    @State private var hapticsEnabled: Bool = true
-    @State private var textToSpeechEnabled: Bool = true
-    @State private var goToOnboarding = false
-    @State private var soundsDefault: String = "Default"
-    @State private var alertsValue: String = "Elders missed 1 reminder"
-    
+    @State private var preferences = NotificationPreferences(sound: .default, hapticsEnabled: true, textToSpeechEnabled: true)
+    private let alertsValue = "Elders missed 1 reminder"
+
     var body: some View {
         NavigationStack {
             List {
-                // Profile Header
                 Section {
                     HStack(spacing: 14) {
                         ZStack {
@@ -32,42 +19,50 @@ struct ProfileView: View {
                                 .foregroundColor(.white)
                         }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Bowo Prabu")
+                            Text(appState.profile?.name ?? "Bowo Prabu")
                                 .font(.headline)
-                            Text("Children")
+                            Text(appState.profile?.role.displayName ?? "Children")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
                     }
                     .padding(.vertical, 4)
                 }
-                
-                // Account
+
                 Section("Account") {
                     NavigationLink("Elder Lists") {
                         ElderListView()
                     }
                     NavigationLink("Connected Devices") {
-                        Text("Connected Devices")
-                            .navigationTitle("Connected Devices")
+                        ConnectedDevicesView()
                     }
                 }
-                
-                // Notification
+
                 Section("Notification") {
-                    HStack {
-                        Text("Sounds")
-                        Spacer()
-                        Text(soundsDefault)
-                            .foregroundColor(.secondary)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                    Menu {
+                        ForEach(AlertSound.allCases, id: \.self) { sound in
+                            Button(sound.rawValue) {
+                                preferences.sound = sound
+                                savePreferences()
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text("Sounds")
+                            Spacer()
+                            Text(preferences.sound.rawValue)
+                                .foregroundColor(.secondary)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
                     }
-                    
-                    Toggle("Haptics", isOn: $hapticsEnabled)
-                    Toggle("Text To Speech", isOn: $textToSpeechEnabled)
-                    
+
+                    Toggle("Haptics", isOn: $preferences.hapticsEnabled)
+                        .onChange(of: preferences.hapticsEnabled) { savePreferences() }
+                    Toggle("Text To Speech", isOn: $preferences.textToSpeechEnabled)
+                        .onChange(of: preferences.textToSpeechEnabled) { savePreferences() }
+
                     HStack {
                         Text("Alerts")
                         Spacer()
@@ -79,8 +74,7 @@ struct ProfileView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                
-                // General
+
                 Section("General") {
                     NavigationLink("Emergency Services") {
                         Text("Emergency Services")
@@ -90,10 +84,12 @@ struct ProfileView: View {
                         Text("Data & Privacy")
                             .navigationTitle("Data & Privacy")
                     }
-                    
                 }
+
                 Button {
-                    goToOnboarding = true
+                    Task {
+                        await appState.logout()
+                    }
                 } label: {
                     Text("Logout")
                         .foregroundColor(.white)
@@ -104,17 +100,21 @@ struct ProfileView: View {
                 }
                 .padding()
             }
-            .navigationDestination(isPresented: $goToOnboarding) {
-                Onboarding()
-            }
-            
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
+            .task {
+                await appState.loadProfile()
+                preferences = appState.notificationPreferences
+            }
+        }
+    }
+
+    private func savePreferences() {
+        Task {
+            await appState.updateNotificationPreferences(preferences)
         }
     }
 }
-
-// MARK: - Elder List View (Account > Elder Lists)
 
 struct ElderListView: View {
     @EnvironmentObject var appState: AppState
@@ -137,19 +137,16 @@ struct ElderListView: View {
                         Text(elder.name)
                             .font(.body)
                             .fontWeight(.medium)
-                        Text("Elder")
+                        Text("Shown on monitoring dashboard")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(Color(.systemGray3))
                 }
                 .padding(.vertical, 4)
             }
             .onDelete { indexSet in
-                appState.elders.remove(atOffsets: indexSet)
+                appState.deleteElders(at: indexSet)
             }
         }
         .navigationTitle("Elder Lists")
@@ -159,23 +156,59 @@ struct ElderListView: View {
                     Image(systemName: "plus")
                 }
             }
-            ToolbarItem(placement: .navigationBarLeading) {
-                EditButton()
-            }
         }
         .alert("Add Elder", isPresented: $showAddElder) {
             TextField("Elder's name", text: $newElderName)
             Button("Add") {
-                if !newElderName.isEmpty {
-                    appState.elders.append(Elder(name: newElderName))
-                    newElderName = ""
-                }
+                appState.addElder(name: newElderName)
+                newElderName = ""
             }
             Button("Cancel", role: .cancel) { newElderName = "" }
+        } message: {
+            Text("This elder will appear on the dashboard filter.")
+        }
+    }
+}
+
+struct ConnectedDevicesView: View {
+    @EnvironmentObject var appState: AppState
+    @State private var devices: [ConnectedDevice] = []
+
+    var body: some View {
+        List {
+            ForEach(devices) { device in
+                HStack(spacing: 14) {
+                    Image(systemName: device.role == .elder ? "heart.text.square.fill" : "person.2.fill")
+                        .foregroundColor(.blue)
+                        .frame(width: 32)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(device.name)
+                            .font(.body)
+                        Text(device.role.displayName)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    if device.isCurrentDevice {
+                        Text("Current")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .navigationTitle("Connected Devices")
+        .task {
+            devices = await appState.loadConnectedDevices()
         }
     }
 }
 
 #Preview {
     ProfileView()
+        .environmentObject(AppState())
 }
