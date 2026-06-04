@@ -43,11 +43,11 @@ enum RepeatOption: String, CaseIterable {
 }
 
 enum EarlyReminderOption: String, CaseIterable {
-    case none = "None"
-    case inTime = "In Time"
-    case fiveMin = "5 Minutes Before"
-    case tenMin = "10 Minutes Before"
-    case thirtyMin = "30 Minutes Before"
+    case none = "none"
+    case inTime = "in_time"
+    case fiveMin = "5_minutes_before"
+    case tenMin = "10_minutes_before"
+    case thirtyMin = "30_minutes_before"
 }
 
 enum ReminderCategory: String, CaseIterable {

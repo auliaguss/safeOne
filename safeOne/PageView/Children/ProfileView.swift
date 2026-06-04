@@ -1,22 +1,12 @@
-//
-//  ProfileView.swift
-//  ElderCareApp
-//
-//  Created by Hercio Venceslau Silla on 28/05/26.
-//
-
 import SwiftUI
 
 // MARK: - Profile View
-
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
-    @State private var hapticsEnabled: Bool = true
-    @State private var textToSpeechEnabled: Bool = true
     @State private var goToOnboarding = false
-    @State private var soundsDefault: String = "Default"
+    @State private var showEditProfile = false
     @State private var alertsValue: String = "Elders missed 1 reminder"
-    
+
     var body: some View {
         NavigationStack {
             List {
@@ -27,47 +17,42 @@ struct ProfileView: View {
                             Circle()
                                 .fill(Color(.systemGray4))
                                 .frame(width: 50, height: 50)
-                            Image(systemName: "person.fill")
-                                .font(.title2)
-                                .foregroundColor(.white)
+                            if let avatar = appState.currentUser?.avatar, !avatar.isEmpty {
+                                Text(avatar)
+                                    .font(.system(size: 28))
+                            } else {
+                                Image(systemName: "person.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.white)
+                            }
                         }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Bowo Prabu")
+                            Text(appState.currentUser?.name ?? "Caregiver")
                                 .font(.headline)
                             Text("Children")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                     .padding(.vertical, 4)
+                    .contentShape(Rectangle())
+                    .onTapGesture { showEditProfile = true }
                 }
-                
+
                 // Account
                 Section("Account") {
                     NavigationLink("Elder Lists") {
-                        ElderListView()
-                    }
-                    NavigationLink("Connected Devices") {
-                        Text("Connected Devices")
-                            .navigationTitle("Connected Devices")
+                        Text("Elder Lists")
+                            .navigationTitle("Elder Lists")
                     }
                 }
-                
+
                 // Notification
                 Section("Notification") {
-                    HStack {
-                        Text("Sounds")
-                        Spacer()
-                        Text(soundsDefault)
-                            .foregroundColor(.secondary)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Toggle("Haptics", isOn: $hapticsEnabled)
-                    Toggle("Text To Speech", isOn: $textToSpeechEnabled)
-                    
                     HStack {
                         Text("Alerts")
                         Spacer()
@@ -79,103 +64,150 @@ struct ProfileView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 // General
                 Section("General") {
                     NavigationLink("Emergency Services") {
-                        Text("Emergency Services")
-                            .navigationTitle("Emergency Services")
+                        Text("Emergency Services").navigationTitle("Emergency Services")
                     }
                     NavigationLink("Data & Privacy") {
-                        Text("Data & Privacy")
-                            .navigationTitle("Data & Privacy")
+                        Text("Data & Privacy").navigationTitle("Data & Privacy")
                     }
-                    
                 }
-                Button {
-                    goToOnboarding = true
-                } label: {
-                    Text("Logout")
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.red)
-                        .cornerRadius(16)
-                }
-                .padding()
+
+                
             }
             .navigationDestination(isPresented: $goToOnboarding) {
                 Onboarding()
             }
-            
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showEditProfile) {
+                EditProfileView()
+                    .environmentObject(appState)
+            }
         }
     }
 }
 
-// MARK: - Elder List View (Account > Elder Lists)
-
-struct ElderListView: View {
+// MARK: - Edit Profile View
+struct EditProfileView: View {
     @EnvironmentObject var appState: AppState
-    @State private var showAddElder = false
-    @State private var newElderName = ""
-    
+    @Environment(\.dismiss) var dismiss
+
+    @State private var name: String = ""
+    @State private var avatar: String = ""
+    @State private var isSaving = false
+    @State private var errorMessage: String? = nil
+
+    let avatarOptions = ["😊", "👦", "👧", "👨", "👩", "🧑", "👴", "👵", "🧓", "🙂"]
+
     var body: some View {
-        List {
-            ForEach(appState.elders) { elder in
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill(Color(.systemBlue).opacity(0.15))
-                            .frame(width: 44, height: 44)
-                        Text(String(elder.name.prefix(1)))
-                            .font(.headline)
-                            .foregroundColor(.blue)
+        NavigationStack {
+            Form {
+                // User ID
+                Section("User ID") {
+                    Text(appState.currentUser?.id ?? "-")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .textSelection(.enabled)
+                }
+
+                // Avatar
+                Section("Avatar") {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
+                        ForEach(avatarOptions, id: \.self) { emoji in
+                            Text(emoji)
+                                .font(.system(size: 36))
+                                .frame(width: 56, height: 56)
+                                .background(avatar == emoji ? Color.blue.opacity(0.2) : Color(.systemGray6))
+                                .clipShape(Circle())
+                                .overlay(
+                                    Circle().stroke(avatar == emoji ? Color.blue : Color.clear, lineWidth: 2)
+                                )
+                                .onTapGesture { avatar = emoji }
+                        }
                     }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(elder.name)
-                            .font(.body)
-                            .fontWeight(.medium)
-                        Text("Elder")
+                    .padding(.vertical, 8)
+                }
+
+                // Name
+                Section("Name") {
+                    TextField("Enter your name", text: $name)
+                }
+
+                if let error = errorMessage {
+                    Section {
+                        Text(error)
+                            .foregroundColor(.red)
                             .font(.caption)
-                            .foregroundColor(.secondary)
                     }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(Color(.systemGray3))
-                }
-                .padding(.vertical, 4)
-            }
-            .onDelete { indexSet in
-                appState.elders.remove(atOffsets: indexSet)
-            }
-        }
-        .navigationTitle("Elder Lists")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { showAddElder = true }) {
-                    Image(systemName: "plus")
                 }
             }
-            ToolbarItem(placement: .navigationBarLeading) {
-                EditButton()
-            }
-        }
-        .alert("Add Elder", isPresented: $showAddElder) {
-            TextField("Elder's name", text: $newElderName)
-            Button("Add") {
-                if !newElderName.isEmpty {
-                    appState.elders.append(Elder(name: newElderName))
-                    newElderName = ""
+            .navigationTitle("Edit Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        Task { await saveProfile() }
+                    } label: {
+                        if isSaving { ProgressView() } else { Text("Save").bold() }
+                    }
+                    .disabled(isSaving || name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
-            Button("Cancel", role: .cancel) { newElderName = "" }
+            .onAppear {
+                name = appState.currentUser?.name ?? ""
+                avatar = appState.currentUser?.avatar ?? ""
+            }
         }
     }
-}
 
-#Preview {
-    ProfileView()
+    private func saveProfile() async {
+        guard let token = appState.token,
+              let url = URL(string: "https://safe-one-backend.vercel.app/api/users/me")
+        else { return }
+
+        isSaving = true
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: [
+            "name": name.trimmingCharacters(in: .whitespaces),
+            "avatar": avatar
+        ])
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            else {
+                await MainActor.run { errorMessage = "Failed to save. Try again."; isSaving = false }
+                return
+            }
+
+            await MainActor.run {
+                if let user = appState.currentUser {
+                    let updated = CurrentUser(
+                        id: user.id,
+                        name: json["name"] as? String ?? user.name,
+                        role: user.role,
+                        avatar: json["avatar"] as? String ?? user.avatar
+                    )
+                    appState.currentUser = updated
+                    if let encoded = try? JSONEncoder().encode(updated) {
+                        UserDefaults.standard.set(encoded, forKey: "current_user")
+                    }
+                }
+                isSaving = false
+                dismiss()
+            }
+        } catch {
+            await MainActor.run { errorMessage = "Network error. Try again."; isSaving = false }
+        }
+    }
 }

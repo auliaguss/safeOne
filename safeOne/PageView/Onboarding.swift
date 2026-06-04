@@ -224,7 +224,7 @@ struct Onboarding: View {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let devUserId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
-        let dummyName = role == "elder" ? "Opa/Oma" : "Caregiver"
+        let dummyName = role == "elder" ? "Elder" : "Caregiver"
 
         let body: [String: Any] = [
             "devUserId": devUserId,

@@ -11,6 +11,7 @@ struct ElderCallingView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject private var agoraManager = AgoraManager.shared
 
+    @State private var waitingSeconds = 0  // ← tambah di atas body
     @State private var isConnected = false
     @State private var callDuration = 0
     @State private var errorMessage: String? = nil
@@ -173,9 +174,16 @@ struct ElderCallingView: View {
         .onReceive(timer) { _ in
             if isConnected {
                 callDuration += 1
-
                 if callDuration % 3 == 0 {
                     Task { await checkCallStatus() }
+                }
+            } else {
+                waitingSeconds += 1
+                if waitingSeconds % 3 == 0 {
+                    Task { await checkCallStatus() }
+                }
+                if waitingSeconds >= 60 {
+                    Task { await cancelCall() }
                 }
             }
         }

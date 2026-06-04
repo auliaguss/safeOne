@@ -2,11 +2,21 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>voip</string>
-		<string>remote-notification</string>
-		<string>audio</string>
-	</array>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>voip</string>
+        <string>remote-notification</string>
+        <string>audio</string>
+    </array>
+
+    <!-- ✅ TAMBAHKAN INI -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>SafeOne membutuhkan mikrofon untuk video call darurat</string>
+
+    <key>NSCameraUsageDescription</key>
+    <string>SafeOne membutuhkan kamera untuk video call darurat</string>
+    
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>SafeOne membutuhkan akses galeri untuk foto reminder</string>
 </dict>
 </plist>
