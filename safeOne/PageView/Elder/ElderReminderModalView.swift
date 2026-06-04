@@ -8,8 +8,14 @@
 import SwiftUI
 
 struct ElderReminderModalView: View {
+    @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
-    let reminder: ReminderItem
+    let reminder: Reminder
+
+    private var reminderTime: String {
+        let nextDate = reminder.nextOccurrence(after: Date()) ?? reminder.date
+        return nextDate.formatted(.dateTime.hour().minute())
+    }
     
     var body: some View {
         NavigationStack{
@@ -42,7 +48,7 @@ struct ElderReminderModalView: View {
                             .frame(width: 260, height: 260)
                         
                         //  placeholder icon/emoji
-                        Text("💊")
+                        Text(reminder.imageName ?? "💊")
                             .font(.system(size: 110))
                     }
                     .padding(.bottom, 30)
@@ -53,13 +59,15 @@ struct ElderReminderModalView: View {
                             .font(.system(size: 34, weight: .bold, design: .rounded))
                             .foregroundColor(.black)
                         
-                        Text(reminder.dosage)
+                        Text(reminder.category == .none ? "Reminder" : reminder.category.rawValue)
                             .font(.system(size: 28, weight: .medium, design: .rounded))
                             .foregroundColor(.gray)
                         
-                        Text(reminder.instruction)
+                        Text(reminder.notes.isEmpty ? "No extra notes" : reminder.notes)
                             .font(.system(size: 20, weight: .regular, design: .rounded))
                             .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 24)
                     }
                     
                     Spacer()
@@ -68,7 +76,7 @@ struct ElderReminderModalView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "clock.fill")
                             .foregroundColor(Color(hex: "007AFF"))
-                        Text(reminder.time)
+                        Text(reminderTime)
                             .font(.system(size: 22, weight: .bold, design: .rounded))
                             .foregroundColor(Color(hex: "007AFF"))
                     }
@@ -77,7 +85,10 @@ struct ElderReminderModalView: View {
                     // Group Action Buttons
                     VStack(spacing: 12) {
                         // Button Snooze on 10 mins
-                        Button(action: { dismiss() }) {
+                        Button(action: {
+                            appState.snoozeReminder(reminder.id)
+                            dismiss()
+                        }) {
                             Text("Snooze on 10 mins")
                                 .font(.system(.headline, design: .rounded))
                                 .foregroundColor(Color(hex: "007AFF"))
@@ -92,7 +103,10 @@ struct ElderReminderModalView: View {
                         }
                         
                         // Button Done
-                        Button(action: { dismiss() }) {
+                        Button(action: {
+                            appState.acknowledgeReminder(reminder.id)
+                            dismiss()
+                        }) {
                             Text("Done")
                                 .font(.system(.headline, design: .rounded))
                                 .fontWeight(.bold)

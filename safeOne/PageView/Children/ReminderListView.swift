@@ -43,7 +43,7 @@ struct ReminderListView: View {
 
                 ScrollView {
                     VStack(spacing: 0) {
-                        let active = appState.reminders.filter { !$0.isPast }
+                        let active = appState.activeReminders(for: appState.selectedElder)
 
                         ForEach(active) { reminder in
                             NavigationLink(destination: ReminderDetailView(reminder: reminder)) {
@@ -69,7 +69,7 @@ struct ReminderListView: View {
                         }
 
                         if showPastReminders {
-                            let past = appState.reminders.filter { $0.isPast }
+                            let past = appState.pastReminders(for: appState.selectedElder)
                             ForEach(past) { reminder in
                                 ReminderListRow(reminder: reminder, isPast: true)
                                 Divider()
@@ -95,13 +95,23 @@ struct ReminderListRow: View {
 
     var subtitleString: String {
         let timeOnly = DateFormatter()
-        timeOnly.dateFormat = "HH.mm"
+        timeOnly.dateFormat = "HH:mm"
+        let weekdayAndTime = DateFormatter()
+        weekdayAndTime.dateFormat = "EEE, HH:mm"
+        let dayAndTime = DateFormatter()
+        dayAndTime.dateFormat = "d MMM, HH:mm"
         let full = DateFormatter()
-        full.dateFormat = "d MMM, HH.mm"
+        full.dateFormat = "d MMM, HH:mm"
+
+        let nextDate = reminder.nextOccurrence(after: Date()) ?? reminder.date
 
         switch reminder.repeatOption {
         case .everyday:
-            return "Everyday, \(timeOnly.string(from: reminder.date))"
+            return "Everyday, \(timeOnly.string(from: nextDate))"
+        case .weekly:
+            return "Weekly, \(weekdayAndTime.string(from: nextDate))"
+        case .monthly:
+            return "Monthly, \(dayAndTime.string(from: nextDate))"
         default:
             return full.string(from: reminder.date)
         }

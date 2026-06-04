@@ -60,9 +60,9 @@ struct ElderDashboardSubview: View {
                 }
             }
             // Menampilkan pop-up detail obat saat baris di-klik sesuai mockup terakhirmu
-            .sheet(item: $selectedReminder) { item in
-                ElderReminderModalView(reminder: item)
-            }
+//            .sheet(item: $selectedReminder) { item in
+//                ElderReminderModalView(reminder: item)
+//            }
         }
         .navigationBarHidden(true)
     }

@@ -1,5 +1,5 @@
 //
-//  ElderDashboardSubview.swift
+//  ElderDashboard.swift
 //  safeOne
 //
 //  Created by Fransiskus Risky Gawahi on 29/05/26.
@@ -13,15 +13,26 @@ enum ElderTab {
 }
 
 struct ElderDashboard: View {
+    @EnvironmentObject var appState: AppState
     @State private var currentTab: ElderTab = .dashboard
     @State private var showCallingScreen = false
-    @State private var selectedReminder: ReminderItem? = nil
-    
-    // Data list array medicine reminder for elder
-    let reminders = [
-        ReminderItem(title: "Antibiotics", dosage: "1 Tablet", instruction: "After Meal", time: "18:00", statusText: "in 5 hours", imageName: "pill.fill"),
-        ReminderItem(title: "Paracetamol", dosage: "1 Tablet", instruction: "After Meal", time: "18:00", statusText: "in 5 hours", imageName: "pill.fill")
-    ]
+    @State private var selectedReminder: Reminder? = nil
+
+    private var elder: Elder? {
+        appState.selectedElder ?? appState.elders.first
+    }
+
+    private var todayReminders: [Reminder] {
+        appState.todayReminders(for: elder)
+    }
+
+    private var todayAppointments: [Reminder] {
+        todayReminders.filter { $0.category == .appointment }
+    }
+
+    private var todayCareReminders: [Reminder] {
+        todayReminders.filter { $0.category != .appointment }
+    }
     
     var body: some View {
         NavigationStack{
@@ -43,7 +54,7 @@ struct ElderDashboard: View {
                                         Text("Daily Reminder")
                                             .font(.system(size: 34, weight: .bold, design: .rounded))
                                             .foregroundColor(.black)
-                                        Text("Mon, 25 May 2026")
+                                        Text(Date().formatted(.dateTime.weekday(.abbreviated).day().month(.wide).year()))
                                             .font(.system(.body, design: .rounded))
                                             .foregroundColor(.gray)
                                     }
@@ -55,28 +66,33 @@ struct ElderDashboard: View {
                                         Text("Today's Events")
                                             .font(.system(size: 22, weight: .bold, design: .rounded))
                                             .foregroundColor(.black)
-                                        
-                                        HStack(spacing: 16) {
-                                            ZStack {
-                                                Color(hex: "E8F3FF").frame(width: 48, height: 48).cornerRadius(12)
-                                                Text("👨‍⚕️").font(.title)
+
+                                        if let appointment = todayAppointments.first {
+                                            Button(action: { selectedReminder = appointment }) {
+                                                HStack(spacing: 16) {
+                                                    ZStack {
+                                                        Color(hex: "E8F3FF").frame(width: 48, height: 48).cornerRadius(12)
+                                                        Text("👨‍⚕️").font(.title)
+
+                                                    }
+
+                                                    VStack(alignment: .leading, spacing: 4) {
+                                                        Text(appointment.title).font(.body).fontWeight(.semibold).foregroundColor(.black)
+                                                        Text(displayTime(for: appointment)).font(.subheadline).foregroundColor(.gray)
+                                                    }
+                                                    Spacer()
+                                                    Text("See Details")
+                                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                                        .foregroundColor(.white)
+                                                        .padding(.horizontal, 16).padding(.vertical, 8)
+                                                        .background(Color(hex: "3A86F5")).cornerRadius(10)
+                                                }
+                                                .padding(.all, 16)
+                                                .background(Color.white).cornerRadius(18)
                                             }
-                                            
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text("Doctor Appointment").font(.body).fontWeight(.semibold).foregroundColor(.black)
-                                                Text("14.00").font(.subheadline).foregroundColor(.gray)
-                                            }
-                                            Spacer()
-                                            Button(action: {}) {
-                                                Text("See Details")
-                                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                                    .foregroundColor(.white)
-                                                    .padding(.horizontal, 16).padding(.vertical, 8)
-                                                    .background(Color(hex: "3A86F5")).cornerRadius(10)
-                                            }
+                                        } else {
+                                            emptyCard(text: "No appointments today")
                                         }
-                                        .padding(.all, 16)
-                                        .background(Color.white).cornerRadius(18)
                                     }
                                     .padding(.horizontal, 24)
                                     
@@ -85,29 +101,35 @@ struct ElderDashboard: View {
                                         Text("Today's Reminders")
                                             .font(.system(size: 22, weight: .bold, design: .rounded))
                                             .foregroundColor(.black)
-                                        
-                                        VStack(spacing: 12) {
-                                            ForEach(reminders) { item in
-                                                Button(action: { selectedReminder = item }) {
-                                                    HStack(spacing: 16) {
-                                                        ZStack {
-                                                            Color(hex: "E8F3FF").frame(width: 48, height: 48).cornerRadius(12)
-                                                            Image(systemName: item.imageName).font(.title2).foregroundColor(Color(hex: "FF9500"))
+
+                                        if todayCareReminders.isEmpty {
+                                            emptyCard(text: "No reminders scheduled today")
+                                        } else {
+                                            VStack(spacing: 12) {
+                                                ForEach(todayCareReminders) { reminder in
+                                                    Button(action: { selectedReminder = reminder }) {
+                                                        HStack(spacing: 16) {
+                                                            ZStack {
+                                                                Color(hex: "E8F3FF").frame(width: 48, height: 48).cornerRadius(12)
+                                                                Text(reminder.imageName ?? "💊").font(.title2)
+                                                            }
+
+                                                            VStack(alignment: .leading, spacing: 2) {
+                                                                Text(reminder.title).font(.body).fontWeight(.bold).foregroundColor(.black)
+                                                                Text(reminder.notes.isEmpty ? (reminder.category == .none ? "Reminder" : reminder.category.rawValue) : reminder.notes)
+                                                                    .font(.caption).foregroundColor(.gray)
+                                                                    .lineLimit(1)
+                                                                Text(displayTime(for: reminder)).font(.subheadline).foregroundColor(.gray)
+                                                            }
+                                                            Spacer()
+                                                            Text(statusText(for: reminder))
+                                                                .font(.system(size: 13, weight: .medium)).foregroundColor(Color(hex: "007AFF"))
+                                                                .padding(.horizontal, 12).padding(.vertical, 6)
+                                                                .background(Capsule().stroke(Color(hex: "007AFF"), lineWidth: 1))
                                                         }
-                                                        
-                                                        VStack(alignment: .leading, spacing: 2) {
-                                                            Text(item.title).font(.body).fontWeight(.bold).foregroundColor(.black)
-                                                            Text(item.instruction).font(.caption).foregroundColor(.gray)
-                                                            Text(item.time).font(.subheadline).foregroundColor(.gray)
-                                                        }
-                                                        Spacer()
-                                                        Text(item.statusText)
-                                                            .font(.system(size: 13, weight: .medium)).foregroundColor(Color(hex: "007AFF"))
-                                                            .padding(.horizontal, 12).padding(.vertical, 6)
-                                                            .background(Capsule().stroke(Color(hex: "007AFF"), lineWidth: 1))
+                                                        .padding(.all, 16)
+                                                        .background(Color.white).cornerRadius(18)
                                                     }
-                                                    .padding(.all, 16)
-                                                    .background(Color.white).cornerRadius(18)
                                                 }
                                             }
                                         }
@@ -147,6 +169,7 @@ struct ElderDashboard: View {
             // MODAL OVERLAY while ROWS clicked / SOS clicked
             .sheet(item: $selectedReminder) { item in
                 ElderReminderModalView(reminder: item)
+                    .environmentObject(appState)
             }
             .fullScreenCover(isPresented: $showCallingScreen) {
                 ElderCallingView()
@@ -154,9 +177,37 @@ struct ElderDashboard: View {
         }
         .navigationBarHidden(true)
     }
+
+    private func displayTime(for reminder: Reminder) -> String {
+        let nextDate = reminder.nextOccurrence(after: Date()) ?? reminder.date
+        return nextDate.formatted(.dateTime.hour().minute())
+    }
+
+    private func statusText(for reminder: Reminder) -> String {
+        guard let nextDate = reminder.nextOccurrence(after: Date()) else {
+            return "Done"
+        }
+
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: nextDate, relativeTo: Date())
+    }
+
+    private func emptyCard(text: String) -> some View {
+        HStack {
+            Text(text)
+                .font(.body)
+                .foregroundColor(.gray)
+            Spacer()
+        }
+        .padding(.all, 16)
+        .background(Color.white)
+        .cornerRadius(18)
+    }
 }
 
 
 #Preview {
     ElderDashboard()
+        .environmentObject(AppState())
 }

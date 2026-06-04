@@ -81,8 +81,9 @@ struct DashboardReminderRow: View {
 
     var timeString: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "HH.mm"
-        return formatter.string(from: reminder.date)
+        formatter.dateFormat = "HH:mm"
+        let nextDate = reminder.nextOccurrence(after: Date()) ?? reminder.date
+        return formatter.string(from: nextDate)
     }
 
     var body: some View {

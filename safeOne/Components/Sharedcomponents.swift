@@ -20,7 +20,7 @@ struct ElderSelectorView: View {
 
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.2)) {
-                        appState.selectedElderIndex = index
+                        appState.selectElder(at: index)
                     }
                 }) {
                     Text(elder.name)
@@ -37,10 +37,10 @@ struct ElderSelectorView: View {
             }
             Spacer()
         }
-        .onChange(of: appState.elders.count) { newCount in
+        .onChange(of: appState.elders.count) { _, newCount in
             // Guard selectedElderIndex if elders shrink
             if appState.selectedElderIndex >= newCount {
-                appState.selectedElderIndex = max(0, newCount - 1)
+                appState.selectElder(at: max(0, newCount - 1))
             }
         }
     }

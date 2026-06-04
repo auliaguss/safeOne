@@ -23,6 +23,19 @@ struct AddReminderView: View {
     @State private var showTimePicker = false
 
     let emojiOptions: [String] = ["💊", "🩺", "🏃", "🍎", "💉", "🩹", "🧘", "🚶"]
+
+    private var scheduledDate: Date {
+        let cal = Calendar.current
+        var comps = cal.dateComponents([.year, .month, .day], from: selectedDate)
+        let timeComps = cal.dateComponents([.hour, .minute], from: selectedTime)
+        comps.hour = timeComps.hour
+        comps.minute = timeComps.minute
+        return cal.date(from: comps) ?? selectedDate
+    }
+
+    private var canSave: Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && appState.selectedElder != nil
+    }
  
     var body: some View {
         NavigationStack {
@@ -144,6 +157,12 @@ struct AddReminderView: View {
                         FormPickerRowDisplay(label: "Category", value: category.rawValue)
                     }
 
+                    Text("Phone pop-ups will still appear even when SafeOne is closed after notifications are allowed.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                        .padding(.top, 16)
+
                     Spacer(minLength: 40)
                 }
             }
@@ -163,7 +182,7 @@ struct AddReminderView: View {
                     Button(action: saveReminder) {
                         ZStack {
                             Circle()
-                                .fill(title.isEmpty ? Color(.systemGray4) : Color.blue)
+                                .fill(canSave ? Color.blue : Color(.systemGray4))
                                 .frame(width: 32, height: 32)
                             Image(systemName: "checkmark")
                                 .font(.caption)
@@ -171,28 +190,23 @@ struct AddReminderView: View {
                                 .foregroundColor(.white)
                         }
                     }
-                    .disabled(title.isEmpty)
+                    .disabled(!canSave)
                 }
             }
         }
     }
 
     func saveReminder() {
-        let cal = Calendar.current
-        var comps = cal.dateComponents([.year, .month, .day], from: selectedDate)
-        let timeComps = cal.dateComponents([.hour, .minute], from: selectedTime)
-        comps.hour = timeComps.hour
-        comps.minute = timeComps.minute
-        let finalDate = cal.date(from: comps) ?? selectedDate
+        guard let elder = appState.selectedElder else { return }
 
         let newReminder = Reminder(
             title: title,
             notes: notes,
-            date: finalDate,
+            date: scheduledDate,
             repeatOption: repeatOption,
             earlyReminder: earlyReminder,
             category: category,
-            elderID: appState.selectedElder?.id ?? UUID(),
+            elderID: elder.id,
             imageName: selectedEmoji
         )
         appState.addReminder(newReminder)

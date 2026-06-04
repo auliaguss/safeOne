@@ -11,6 +11,10 @@ struct ReminderDetailView: View {
     @Environment(\.dismiss) var dismiss
     let reminder: Reminder
 
+    private var displayDate: Date {
+        reminder.nextOccurrence(after: Date()) ?? reminder.date
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
@@ -59,12 +63,12 @@ struct ReminderDetailView: View {
 
                 FormRowDisplay(
                     label: "Date",
-                    value: reminder.date.formatted(.dateTime.day().month(.wide).year())
+                    value: displayDate.formatted(.dateTime.day().month(.wide).year())
                 )
                 Divider().padding(.leading)
                 FormRowDisplay(
                     label: "Time",
-                    value: reminder.date.formatted(.dateTime.hour().minute())
+                    value: displayDate.formatted(.dateTime.hour().minute())
                 )
 
                 Divider().padding(.top, 8)

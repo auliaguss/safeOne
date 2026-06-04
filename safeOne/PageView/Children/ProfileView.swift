@@ -149,7 +149,7 @@ struct ElderListView: View {
                 .padding(.vertical, 4)
             }
             .onDelete { indexSet in
-                appState.elders.remove(atOffsets: indexSet)
+                appState.removeElders(atOffsets: indexSet)
             }
         }
         .navigationTitle("Elder Lists")
@@ -167,7 +167,7 @@ struct ElderListView: View {
             TextField("Elder's name", text: $newElderName)
             Button("Add") {
                 if !newElderName.isEmpty {
-                    appState.elders.append(Elder(name: newElderName))
+                    appState.addElder(named: newElderName)
                     newElderName = ""
                 }
             }
