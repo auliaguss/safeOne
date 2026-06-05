@@ -1,4 +1,6 @@
 import Foundation
+import Auth
+import PostgREST
 import Supabase
 import UIKit
 

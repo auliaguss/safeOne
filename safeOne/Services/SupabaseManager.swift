@@ -25,7 +25,12 @@ final class SupabaseManager {
 
         client = SupabaseClient(
             supabaseURL: URL(string: supabaseURLString)!,
-            supabaseKey: supabaseAnonKey
+            supabaseKey: supabaseAnonKey,
+            options: SupabaseClientOptions(
+                auth: SupabaseClientOptions.AuthOptions(
+                    emitLocalSessionAsInitialSession: true
+                )
+            )
         )
     }
 }
