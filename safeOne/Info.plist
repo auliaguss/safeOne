@@ -19,11 +19,7 @@
     <key>NSPhotoLibraryUsageDescription</key>
     <string>SafeOne membutuhkan akses galeri untuk foto reminder</string>
 
-    <!-- Allow plain HTTP to local dev server. Remove before App Store submission. -->
-    <key>NSAppTransportSecurity</key>
-    <dict>
-        <key>NSAllowsArbitraryLoads</key>
-        <true/>
-    </dict>
+    <!-- NSAllowsArbitraryLoads intentionally omitted — production uses HTTPS (Vercel).
+         For local HTTP testing, add it back temporarily in a Debug-only Info.plist. -->
 </dict>
 </plist>

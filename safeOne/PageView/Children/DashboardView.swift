@@ -164,6 +164,11 @@ struct DashboardReminderRow: View {
     let reminder: APIReminder
 
     var timeString: String {
+        // Use times array if available; fall back to date field
+        let t = (reminder.times ?? []).filter { !$0.isEmpty }
+        if !t.isEmpty {
+            return t.map { $0.replacingOccurrences(of: ":", with: ".") }.joined(separator: " | ")
+        }
         guard let d = APIReminder.parseDate(reminder.date) else { return "" }
         let formatter = DateFormatter()
         formatter.dateFormat = "HH.mm"
@@ -202,40 +207,37 @@ struct DashboardReminderRow: View {
     }
 }
 
-// MARK: - Status Badge — same design, uses APIReminder
+// MARK: - Status Badge — circular progress matching Image 4
 
 struct StatusBadgeView: View {
     let reminder: APIReminder
 
     var body: some View {
-        if reminder.isCompleted && reminder.totalCount == 1 {
+        let done = reminder.completedCount
+        let total = max(reminder.totalCount, 1)
+        let complete = reminder.isCompleted || done >= total
+
+        if complete {
+            // Blue filled circle with checkmark
             ZStack {
                 Circle()
                     .fill(Color.blue)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 36, height: 36)
                 Image(systemName: "checkmark")
                     .font(.caption)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
             }
-        } else if reminder.totalCount > 1 {
+        } else {
+            // Circle outline: blue if any progress, gray if none
             ZStack {
                 Circle()
-                    .stroke(Color.blue, lineWidth: 1.5)
-                    .frame(width: 36, height: 36)
-                Text("\(reminder.completedCount)/\(reminder.totalCount)")
+                    .stroke(done > 0 ? Color.blue : Color(.systemGray4), lineWidth: 1.5)
+                    .frame(width: 40, height: 40)
+                Text("\(done)/\(total)")
                     .font(.caption2)
                     .fontWeight(.semibold)
-                    .foregroundColor(.blue)
-            }
-        } else {
-            ZStack {
-                Circle()
-                    .stroke(Color(.systemGray4), lineWidth: 1.5)
-                    .frame(width: 32, height: 32)
-                Text("\(reminder.completedCount)/\(reminder.totalCount)")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(done > 0 ? .blue : .secondary)
             }
         }
     }

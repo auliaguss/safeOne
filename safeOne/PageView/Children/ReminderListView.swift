@@ -45,14 +45,18 @@ struct ReminderListView: View {
                     Button(action: { activeSheet = .create }) {
                         ZStack {
                             Circle()
-                                .fill(selectedElderId != nil ? Color.blue : Color(.systemGray4))
+                                .fill(isLoading ? Color(.systemGray4) : Color.blue)
                                 .frame(width: 36, height: 36)
-                            Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.white)
+                            if isLoading {
+                                ProgressView().tint(.white).scaleEffect(0.6)
+                            } else {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
                         }
                     }
-                    .disabled(selectedElderId == nil)
+                    .disabled(isLoading)
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 12)

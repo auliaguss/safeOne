@@ -9,7 +9,6 @@ import UIKit
 struct Onboarding: View {
     var onComplete: (String) -> Void = { _ in }
     @EnvironmentObject var appState: AppState
-    @State private var navigateToSetupProfile = false
     @State private var navigateToElder = false
     @State private var navigateToChild = false
     @State private var isLoading = false
@@ -148,10 +147,6 @@ struct Onboarding: View {
             .navigationDestination(isPresented: $navigateToChild) {
                 ContentView(appState: _appState)
             }
-            .navigationDestination(isPresented: $navigateToSetupProfile) {
-                SetupProfileView()
-                    .environmentObject(appState)
-            }
         }
         .navigationBarBackButtonHidden(true)
         // Jalankan pengecekan otomatis saat layar muncul
@@ -192,22 +187,10 @@ struct Onboarding: View {
                         
                         await MainActor.run {
                             appState.saveSession(token: token, user: user)
-                            
-                            isCheckingUser = false  // ← tambah ini
-
-                            
-                            let isProfileComplete = !(userName.isEmpty) && (userDict["avatar"] as? String ?? "").isEmpty == false
-                            
-                            if isProfileComplete {
-                                // Sudah setup sebelumnya, langsung ke dashboard
-                                if userRole == "elder" {
-                                    navigateToElder = true
-                                } else {
-                                    navigateToChild = true
-                                }
+                            if userRole == "elder" {
+                                navigateToElder = true
                             } else {
-                                // Belum setup, ke profile dulu
-                                navigateToSetupProfile = true
+                                navigateToChild = true
                             }
                         }
                     }
@@ -286,7 +269,11 @@ struct Onboarding: View {
                 await MainActor.run {
                     appState.saveSession(token: token, user: user)
                     isLoading = false
-                    navigateToSetupProfile = true  // user baru, pasti belum ada avatar
+                    if userRole == "elder" {
+                        navigateToElder = true
+                    } else {
+                        navigateToChild = true
+                    }
                 }
 
             } else {

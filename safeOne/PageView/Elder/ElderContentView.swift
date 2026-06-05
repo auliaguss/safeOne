@@ -18,6 +18,7 @@ struct ElderContentView: View {
             }
         }
         .accentColor(.blue)
+        .navigationBarBackButtonHidden(true)
     }
 }
 #Preview {

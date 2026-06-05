@@ -24,6 +24,7 @@ struct ContentView: View {
             }
         }
         .accentColor(.blue)
+        .navigationBarBackButtonHidden(true)
         .onAppear {
             // Request Izin Kamera & Mic saat masuk ke main menu
             AVAudioApplication.requestRecordPermission { _ in }

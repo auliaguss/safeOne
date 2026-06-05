@@ -20,15 +20,15 @@ struct AddReminderView: View {
 
     @State private var title: String = ""
     @State private var notes: String = ""
-    @State private var selectedDate: Date = Date()
-    @State private var selectedTime: Date = Date()
-    // 0=Sun 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat — default all selected (like iOS alarm)
-    @State private var selectedDays: Set<Int> = Set(0...6)
+    @State private var startDate: Date = Date()
+    @State private var endDate: Date = Date()
+    @State private var hasEndDate: Bool = false
+    @State private var times: [Date] = [Date()]
+    @State private var showStartDatePicker = false
+    @State private var showEndDatePicker = false
     @State private var earlyReminder: EarlyReminderOption = .none
     @State private var category: ReminderCategory = .none
     @State private var selectedEmoji: String = "💊"
-    @State private var showDatePicker = false
-    @State private var showTimePicker = false
     @State private var isSaving = false
     @State private var errorMessage: String? = nil
 
@@ -184,74 +184,96 @@ struct AddReminderView: View {
 
                     SectionHeader(title: "Date & Time")
 
-                    Button(action: { showDatePicker.toggle() }) {
+                    // Start Date
+                    Button(action: {
+                        showStartDatePicker.toggle()
+                        showEndDatePicker = false
+                    }) {
                         FormPickerRowDisplay(
-                            label: "Date",
-                            value: selectedDate.formatted(.dateTime.month(.abbreviated).day().year())
+                            label: "Start Date",
+                            value: startDate.formatted(.dateTime.month(.wide).day().year())
                         )
                     }
-                    if showDatePicker {
-                        DatePicker("", selection: $selectedDate, displayedComponents: .date)
+                    if showStartDatePicker {
+                        DatePicker("", selection: $startDate, displayedComponents: .date)
                             .datePickerStyle(.graphical)
                             .padding(.horizontal)
                     }
 
                     Divider().padding(.leading)
 
-                    Button(action: { showTimePicker.toggle() }) {
+                    // End Date (optional)
+                    Button(action: {
+                        showEndDatePicker.toggle()
+                        showStartDatePicker = false
+                    }) {
                         FormPickerRowDisplay(
-                            label: "Time",
-                            value: selectedTime.formatted(.dateTime.hour().minute())
+                            label: "End Date",
+                            value: hasEndDate
+                                ? endDate.formatted(.dateTime.month(.wide).day().year())
+                                : "None"
                         )
                     }
-                    if showTimePicker {
-                        DatePicker("", selection: $selectedTime, displayedComponents: .hourAndMinute)
-                            .datePickerStyle(.wheel)
+                    if showEndDatePicker {
+                        DatePicker("", selection: $endDate, in: startDate..., displayedComponents: .date)
+                            .datePickerStyle(.graphical)
                             .padding(.horizontal)
+                            .onChange(of: endDate) { _, _ in hasEndDate = true }
+                        if hasEndDate {
+                            Button("Remove end date") {
+                                hasEndDate = false
+                                showEndDatePicker = false
+                            }
+                            .foregroundColor(.red)
+                            .font(.subheadline)
+                            .padding(.vertical, 8)
+                        }
+                    }
+
+                    Divider().padding(.top, 8)
+
+                    // Times array
+                    HStack {
+                        Text("Time").foregroundColor(.primary)
+                        Spacer()
+                        Button("Add Time") {
+                            times.append(times.last ?? Date())
+                        }
+                        .foregroundColor(.blue)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 14)
+
+                    ForEach(times.indices, id: \.self) { i in
+                        Divider().padding(.leading)
+                        HStack(spacing: 10) {
+                            Button {
+                                if times.count > 1 { times.remove(at: i) }
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                                    .foregroundColor(times.count > 1 ? .red : Color(.systemGray4))
+                                    .font(.title3)
+                            }
+                            .disabled(times.count == 1)
+
+                            Text(ordinalLabel(i + 1))
+                                .foregroundColor(.red)
+                                .fontWeight(.medium)
+
+                            Spacer()
+
+                            DatePicker("", selection: $times[i], displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 6)
                     }
 
                     Divider().padding(.top, 8)
 
                     SectionHeader(title: "Reminder")
-
-                    // Repeat — alarm-style day picker
-                    HStack {
-                        Text("Repeat")
-                            .foregroundColor(.primary)
-                        Spacer()
-                        Text(repeatLabel)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 14)
-                    .padding(.bottom, 8)
-
-                    HStack(spacing: 0) {
-                        ForEach(0..<7, id: \.self) { dow in
-                            Spacer(minLength: 2)
-                            Button {
-                                if selectedDays.contains(dow) {
-                                    selectedDays.remove(dow)
-                                } else {
-                                    selectedDays.insert(dow)
-                                }
-                            } label: {
-                                Text(["S","M","T","W","T","F","S"][dow])
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(selectedDays.contains(dow) ? .white : .primary)
-                                    .frame(width: 38, height: 38)
-                                    .background(
-                                        Circle()
-                                            .fill(selectedDays.contains(dow) ? Color.blue : Color(.systemGray5))
-                                    )
-                            }
-                            Spacer(minLength: 2)
-                        }
-                    }
-                    .padding(.horizontal, 4)
-                    .padding(.bottom, 14)
 
                     Divider().padding(.leading)
 
@@ -312,45 +334,23 @@ struct AddReminderView: View {
         }
     }
 
-    // MARK: - Repeat helpers
+    // MARK: - Helpers
 
-    private var repeatLabel: String {
-        if selectedDays.isEmpty   { return "Never" }
-        if selectedDays.count == 7 { return "Every day" }
-        let names = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
-        return selectedDays.sorted().map { names[$0] }.joined(separator: ", ")
-    }
-
-    private var repeatOptionValue: String {
-        if selectedDays.isEmpty   { return "none" }
-        if selectedDays.count == 7 { return "everyday" }
-        return "days:" + selectedDays.sorted().map(String.init).joined(separator: ",")
-    }
-
-    // Convert a stored repeat_option string back to a Set<Int> of DOW values (0=Sun…6=Sat)
-    private static func parseDays(_ repeatOption: String, date: Date?) -> Set<Int> {
-        switch repeatOption.lowercased() {
-        case "none":     return Set()
-        case "everyday": return Set(0...6)
-        case "weekly":
-            if let d = date {
-                // Calendar.weekday is 1-based Sun=1 → convert to 0-based
-                let wd = Calendar(identifier: .gregorian).component(.weekday, from: d) - 1
-                return Set([wd])
+    private func ordinalLabel(_ n: Int) -> String {
+        let suffix: String
+        if (11...13).contains(n % 100) { suffix = "th" }
+        else {
+            switch n % 10 {
+            case 1: suffix = "st"
+            case 2: suffix = "nd"
+            case 3: suffix = "rd"
+            default: suffix = "th"
             }
-            return Set(0...6)
-        case "monthly":
-            return Set(0...6)
-        default:
-            if repeatOption.hasPrefix("days:") {
-                let nums = repeatOption.dropFirst(5).split(separator: ",").compactMap { Int($0) }
-                return Set(nums.filter { (0...6).contains($0) })
-            }
-            return Set(0...6)
         }
+        return "\(n)\(suffix)"
     }
 
-    // Handles both "2026-06-05T09:00:00Z" and "2026-06-05T09:00:00.000Z" from PostgreSQL
+    // Handles "2026-06-05T09:00:00Z" and "2026-06-05T09:00:00.000Z"
     private static func parseDate(_ string: String) -> Date? {
         let withMs = ISO8601DateFormatter()
         withMs.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -368,12 +368,25 @@ struct AddReminderView: View {
         selectedEmoji = r.imageName ?? "💊"
         selectedElderId = r.elderId ?? initialElderId
 
-        if let d = Self.parseDate(r.date) {
-            selectedDate = d
-            selectedTime = d
+        // Start date
+        if let d = Self.parseDate(r.date) { startDate = d }
+
+        // End date
+        if let edStr = r.endDate, !edStr.isEmpty,
+           let ed = APIReminder.parseEndDate(edStr) {
+            endDate = ed
+            hasEndDate = true
         }
 
-        selectedDays = Self.parseDays(r.repeatOption, date: Self.parseDate(r.date))
+        // Times array
+        let timeFmt = DateFormatter()
+        timeFmt.dateFormat = "HH:mm"
+        if let t = r.times, !t.isEmpty {
+            let parsed = t.compactMap { timeFmt.date(from: $0) }
+            times = parsed.isEmpty ? [Date()] : parsed
+        } else if let d = Self.parseDate(r.date) {
+            times = [d]
+        }
 
         if let ea = r.earlyReminder {
             earlyReminder = EarlyReminderOption.allCases.first {
@@ -420,22 +433,38 @@ struct AddReminderView: View {
         isSaving = true
         errorMessage = nil
 
+        // Build the start date timestamp using startDate + first time
         let cal = Calendar.current
-        var comps = cal.dateComponents([.year, .month, .day], from: selectedDate)
-        let timeComps = cal.dateComponents([.hour, .minute], from: selectedTime)
-        comps.hour = timeComps.hour
-        comps.minute = timeComps.minute
-        let finalDate = cal.date(from: comps) ?? selectedDate
+        var comps = cal.dateComponents([.year, .month, .day], from: startDate)
+        let firstTimeComps = cal.dateComponents([.hour, .minute], from: times.first ?? Date())
+        comps.hour = firstTimeComps.hour
+        comps.minute = firstTimeComps.minute
+        let finalDate = cal.date(from: comps) ?? startDate
+
+        // Times as ["HH:mm"] strings
+        let timeFmt = DateFormatter()
+        timeFmt.dateFormat = "HH:mm"
+        let timesArray = times.map { timeFmt.string(from: $0) }
+
+        // End date as "yyyy-MM-dd" or NSNull
+        let endDateValue: Any
+        if hasEndDate {
+            let df = DateFormatter()
+            df.dateFormat = "yyyy-MM-dd"
+            endDateValue = df.string(from: endDate)
+        } else {
+            endDateValue = NSNull()
+        }
 
         let body: [String: Any] = [
             "elderId": targetElderId,
             "title": title,
             "notes": notes,
             "date": ISO8601DateFormatter().string(from: finalDate),
-            "repeatOption": repeatOptionValue,
+            "endDate": endDateValue,
+            "times": timesArray,
             "earlyReminder": earlyReminder.rawValue,
             "category": category.rawValue.lowercased(),
-            "totalCount": 1,
             "imageName": usePhoto ? "🖼️" : selectedEmoji
         ]
 

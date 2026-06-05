@@ -121,15 +121,16 @@ class AppState: ObservableObject {
                 self?.activeReminderAlert = data
             }
 
-        // Regular push token — save for elder users so reminder pushes are deliverable.
-        // Children use VoIP tokens (handled by VoIPManager) for call alerts instead.
+        // Save regular push token for ALL users (elder + child).
+        // VoIPManager separately handles VoIP tokens in apns_token for calls.
+        // This token goes to regular_apns_token — used for reminder & completion notifications.
         pushTokenObserver = NotificationCenter.default
             .publisher(for: .pushTokenRegistered)
             .compactMap { $0.object as? String }
             .receive(on: DispatchQueue.main)
             .sink { [weak self] pushToken in
                 self?.pendingPushToken = pushToken
-                if self?.isElder == true { self?.savePushToken(pushToken) }
+                if self?.token != nil { self?.savePushToken(pushToken) }
             }
     }
 
@@ -137,15 +138,15 @@ class AppState: ObservableObject {
 
     private func savePushToken(_ pushToken: String) {
         guard let authToken = token,
-              let url = URL(string: "\(AppConfig.baseURL)/auth/apns-token") else { return }
+              let url = URL(string: "\(AppConfig.baseURL)/auth/regular-apns-token") else { return }
         Task {
             var req = URLRequest(url: url)
-            req.httpMethod = "PATCH"
+            req.httpMethod = "POST"
             req.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.httpBody = try? JSONSerialization.data(withJSONObject: ["apnsToken": pushToken])
+            req.httpBody = try? JSONSerialization.data(withJSONObject: ["regularApnsToken": pushToken])
             _ = try? await URLSession.shared.data(for: req)
-            print("✅ Regular push token saved for elder")
+            print("✅ Regular push token saved (role: \(currentUser?.role ?? "unknown"))")
         }
     }
     
@@ -159,8 +160,8 @@ class AppState: ObservableObject {
         if let encoded = try? JSONEncoder().encode(user) {
             UserDefaults.standard.set(encoded, forKey: "current_user")
         }
-        // If elder just logged in and we already have the push token, send it now
-        if user.role == "elder", let pushToken = pendingPushToken {
+        // Save regular push token for any role that logs in
+        if let pushToken = pendingPushToken {
             savePushToken(pushToken)
         }
     }
