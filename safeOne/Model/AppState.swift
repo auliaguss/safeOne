@@ -16,7 +16,7 @@ class AppState: ObservableObject {
     // MARK: - Global Incoming Call State
     @Published var incomingCall: IncomingCallData? = nil
     @Published var inActiveCall: Bool = false
-    @Published var isAnsweredFromCallKit: Bool = false
+//    @Published var isAnsweredFromCallKit: Bool = false
 
     private var pollingTask: Task<Void, Never>? = nil
     

@@ -9,6 +9,8 @@ import SwiftUI
 
 @main
 struct safeOneApp: App {
+    @Environment(\.scenePhase) var scenePhase
+
     // Inisialisasi AppState agar hidup selama aplikasi berjalan
     @StateObject private var appState = AppState()
     
@@ -58,6 +60,15 @@ struct safeOneApp: App {
                 // data panggilan bisa langsung memperbarui state incomingCall secara global.
                 voipManager.appState = appState
             }
+//            .onChange(of: scenePhase) { phase in
+//                if phase == .active {
+//                    print("📱 App aktif — incomingCall: \(appState.incomingCall?.callId ?? "nil")")
+//                    // Jika ada incomingCall dan belum di active call, berarti dijawab dari luar
+//                    if appState.incomingCall != nil && !appState.inActiveCall {
+//                        appState.isAnsweredFromCallKit = true
+//                    }
+//                }
+//            }
         }
     }
 }

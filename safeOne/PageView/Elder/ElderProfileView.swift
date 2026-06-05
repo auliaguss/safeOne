@@ -122,17 +122,7 @@ struct ElderProfileView: View {
                     }
                 }
 
-                Button {
-                    goToOnboarding = true
-                } label: {
-                    Text("Logout")
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.red)
-                        .cornerRadius(16)
-                }
-                .padding()
+                
             }
             .navigationDestination(isPresented: $goToOnboarding) {
                 Onboarding()

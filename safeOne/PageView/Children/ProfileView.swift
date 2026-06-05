@@ -80,20 +80,7 @@ struct ProfileView: View {
                     }
                 }
 
-                // Logout
-                Section {
-                    Button {
-                        appState.clearSession()
-                        goToOnboarding = true
-                    } label: {
-                        Text("Logout")
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.red)
-                            .cornerRadius(16)
-                    }
-                }
+                
             }
             .navigationDestination(isPresented: $goToOnboarding) {
                 Onboarding()

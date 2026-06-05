@@ -5,11 +5,13 @@
 
 import SwiftUI
 import Combine
+import AVFoundation
 
 struct IncomingCallView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     @ObservedObject private var agoraManager = AgoraManager.shared
+    
 
     let callId: String
     let elderName: String
@@ -68,7 +70,10 @@ struct IncomingCallView: View {
                         }
 
                         VStack(spacing: 8) {
-                            Button { Task { await acceptCall() } } label: {
+                            Button {
+                                print("🔴 TOMBOL TERIMA DITEKAN")
+                                Task { await acceptCall() }
+                            } label: {
                                 Image(systemName: "phone.fill")
                                     .font(.system(size: 26))
                                     .foregroundColor(.white)
@@ -176,12 +181,25 @@ struct IncomingCallView: View {
                 Task { await endCall() }
             }
         }
+        
+//        .onAppear {
+//            if appState.isAnsweredFromCallKit {
+//                appState.isAnsweredFromCallKit = false
+//                Task { await acceptCall() }
+//            }
+//        }
+        
     }
 
     // MARK: - Accept
     private func acceptCall() async {
+        print("📞 acceptCall() dipanggil — waktu: \(Date())")
+
         // Set TRUE paling awal — polling tidak akan nil-kan incomingCall selagi ini true
         await MainActor.run { appState.inActiveCall = true }
+        
+        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 detik
+
         
         guard let token = appState.token,
               let url = URL(string: "https://safe-one-backend.vercel.app/api/calls/\(callId)/answer")
@@ -207,6 +225,10 @@ struct IncomingCallView: View {
 
             await MainActor.run {
                 agoraManager.setup(appId: agoraAppId)
+                
+                try? AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .videoChat, options: [.allowBluetooth, .defaultToSpeaker])
+                    try? AVAudioSession.sharedInstance().setActive(true)
+                
                 agoraManager.joinChannel(token: receivedToken, channelName: channelName)
                 withAnimation { isConnected = true }
             }
@@ -217,6 +239,7 @@ struct IncomingCallView: View {
 
     // MARK: - Decline
     private func declineCall() async {
+        VoIPManager.shared.reportCallEnded()  // ← tambah ini
         guard let token = appState.token else { return }
         guard let url = URL(string: "https://safe-one-backend.vercel.app/api/calls/\(callId)/decline") else { return }
 
@@ -237,6 +260,7 @@ struct IncomingCallView: View {
     // MARK: - End
     private func endCall() async {
         agoraManager.leaveChannel()
+        VoIPManager.shared.reportCallEnded()  // ← tambah ini
 
         await MainActor.run {
             appState.inActiveCall = false

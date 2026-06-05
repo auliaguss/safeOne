@@ -14,7 +14,9 @@ class VoIPManager: NSObject {
     var appState: AppState?
     private var currentCallUUID: UUID?
     private var pendingCallData: IncomingCallData?  // ← tambah ini
-
+    private var pendingAnswerAction: CXAnswerCallAction?
+    
+    
     
     override init() {
         super.init()
@@ -36,11 +38,19 @@ class VoIPManager: NSObject {
         pendingCallData = nil
     }
     
+    func reportCallEnded() {
+        guard let uuid = currentCallUUID else { return }
+        callKitProvider?.reportCall(with: uuid, endedAt: Date(), reason: .remoteEnded)
+        currentCallUUID = nil
+    }
+    
     func setupPushKit() {
         pushRegistry = PKPushRegistry(queue: DispatchQueue.main)
         pushRegistry?.delegate = self
         pushRegistry?.desiredPushTypes = [.voIP]
     }
+    
+    
     
     private func sendVoipTokenToBackend(token: String) async {
         guard let appState = self.appState,
@@ -97,13 +107,13 @@ extension VoIPManager: PKPushRegistryDelegate {
         self.currentCallUUID = uuid
         
         let callData = IncomingCallData(
-                callId: callId,
-                elderName: elderName,
-                channelName: channelName,
-                agoraToken: "",
-                agoraAppId: agoraAppId
-            )
-            self.pendingCallData = callData
+            callId: callId,
+            elderName: elderName,
+            channelName: channelName,
+            agoraToken: "",
+            agoraAppId: agoraAppId
+        )
+        self.pendingCallData = callData
         
         DispatchQueue.main.async {
             guard let appState = self.appState else { return }
@@ -140,7 +150,13 @@ extension VoIPManager: CXProviderDelegate {
     }
     
     func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
+        print("🔊 didActivate — waktu: \(Date())")
         print("🔊 CallKit: Audio Session Diaktifkan")
+        
+        // ← Ini momen yang tepat untuk Agora join
+        DispatchQueue.main.async {
+            AgoraManager.shared.executePendingJoin()
+        }
     }
     
     func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
@@ -151,15 +167,19 @@ extension VoIPManager: CXProviderDelegate {
     func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
         print("📲 User answer dari CallKit — buka layar Terima/Tolak")
         
+        //        pendingAnswerAction = action  // ← simpan, belum fulfill
+        
+        
         DispatchQueue.main.async {
-                guard let appState = self.appState else { return }
-                
-                // Jika incomingCall sudah nil (kena clear), restore dari backup
-                if appState.incomingCall == nil, let pending = self.pendingCallData {
-                    appState.incomingCall = pending
-                    appState.stopPolling()
-                }
+            guard let appState = self.appState else { return }
+            
+            // Jika incomingCall sudah nil (kena clear), restore dari backup
+            if appState.incomingCall == nil, let pending = self.pendingCallData {
+                appState.incomingCall = pending
+                appState.stopPolling()
             }
+            
+        }
         
         action.fulfill()
     }
