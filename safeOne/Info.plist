@@ -18,5 +18,12 @@
     
     <key>NSPhotoLibraryUsageDescription</key>
     <string>SafeOne membutuhkan akses galeri untuk foto reminder</string>
+
+    <!-- Allow plain HTTP to local dev server. Remove before App Store submission. -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
 </dict>
 </plist>

@@ -158,12 +158,13 @@ struct Onboarding: View {
 
     // MARK: - Check Existing User (Otomatis)
     private func checkExistingUser() async {
-        guard let url = URL(string: "http://safe-one-backend.vercel.app/api/auth/check-user") else { return }
+        guard let url = URL(string: "\(AppConfig.baseURL)/auth/check-user") else { return }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+        request.timeoutInterval = 10   // fail fast — show error instead of hanging
+
         let devUserId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
         let body: [String: Any] = ["devUserId": devUserId]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
@@ -214,7 +215,7 @@ struct Onboarding: View {
         isLoading = true
         errorMessage = nil
 
-        guard let url = URL(string: "http://safe-one-backend.vercel.app/api/auth/dev-login") else {
+        guard let url = URL(string: "\(AppConfig.baseURL)/auth/dev-login") else {
             isLoading = false
             return
         }

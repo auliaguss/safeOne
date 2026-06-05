@@ -57,7 +57,7 @@ struct SOSContactsView: View {
     }
 
     private func loadContacts() async {
-        guard let url = URL(string: "http://safe-one-backend.vercel.app/api/calls/sos-contacts") else { return }
+        guard let url = URL(string: "\(AppConfig.baseURL)/calls/sos-contacts") else { return }
         guard let (data, _) = try? await URLSession.shared.data(from: url) else { return }
         if let decoded = try? JSONDecoder().decode([SOSContact].self, from: data) {
             await MainActor.run { self.contacts = decoded }

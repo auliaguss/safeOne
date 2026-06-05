@@ -9,20 +9,25 @@ struct ReminderDetailView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
     let reminder: APIReminder
-    var onMarkDone: (() -> Void)? = nil
+    var onChanged: (() -> Void)? = nil
 
-    @State private var isMarking = false
-    @State private var isDone: Bool = false
+    @State private var showEdit = false
+    @State private var showDeleteAlert = false
+    @State private var isDeleting = false
+    @State private var didEdit = false
 
-    var formattedDate: String {
-        guard let d = ISO8601DateFormatter().date(from: reminder.date) else { return "-" }
+    // Parse the ISO-8601 string (with or without milliseconds) into a Date for display
+    private var reminderDate: Date? { APIReminder.parseDate(reminder.date) }
+
+    private var formattedDate: String {
+        guard let d = reminderDate else { return "-" }
         let fmt = DateFormatter()
         fmt.dateFormat = "d MMMM yyyy"
         return fmt.string(from: d)
     }
 
-    var formattedTime: String {
-        guard let d = ISO8601DateFormatter().date(from: reminder.date) else { return "-" }
+    private var formattedTime: String {
+        guard let d = reminderDate else { return "-" }
         let fmt = DateFormatter()
         fmt.dateFormat = "HH:mm"
         return fmt.string(from: d)
@@ -41,9 +46,6 @@ struct ReminderDetailView: View {
                         Text(reminder.imageName ?? "💊")
                             .font(.system(size: 40))
                     }
-                    Text("Add photo")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
                 }
                 .padding(.top, 20)
                 .padding(.bottom, 16)
@@ -61,8 +63,9 @@ struct ReminderDetailView: View {
                 Divider().padding(.leading)
 
                 HStack {
-                    Text(reminder.notes?.isEmpty == false ? reminder.notes! : "No notes")
-                        .foregroundColor(reminder.notes?.isEmpty == false ? .primary : .secondary)
+                    let notes = reminder.notes ?? ""
+                    Text(notes.isEmpty ? "No notes" : notes)
+                        .foregroundColor(notes.isEmpty ? .secondary : .primary)
                         .padding(.horizontal)
                         .padding(.vertical, 14)
                     Spacer()
@@ -78,21 +81,47 @@ struct ReminderDetailView: View {
                 Divider().padding(.top, 8)
 
                 SectionHeader(title: "Reminder")
-                FormRowDisplay(label: "Repeat", value: reminder.repeatOption.capitalized)
+                FormRowDisplay(label: "Repeat", value: reminder.repeatDisplayName)
                 Divider().padding(.leading)
-                FormRowDisplay(label: "Early Reminder", value: reminder.earlyReminder ?? "None")
+                FormRowDisplay(label: "Early Reminder", value: (reminder.earlyReminder ?? "none").replacingOccurrences(of: "_", with: " ").capitalized)
                 Divider().padding(.leading)
-                FormRowDisplay(label: "Category", value: reminder.category ?? "None")
+                FormRowDisplay(label: "Category", value: (reminder.category ?? "none").capitalized)
 
-                // Progress
-                if reminder.totalCount > 1 {
-                    Divider().padding(.top, 8)
-                    SectionHeader(title: "Progress")
-                    FormRowDisplay(
-                        label: "Completed",
-                        value: "\(reminder.completedCount) / \(reminder.totalCount)"
+                Divider().padding(.top, 8)
+                SectionHeader(title: "Progress")
+                VStack(spacing: 6) {
+                    ProgressView(
+                        value: Double(reminder.completedCount),
+                        total: Double(max(reminder.totalCount, 1))
                     )
+                    .tint(.blue)
+                    HStack {
+                        Text("\(reminder.completedCount) of \(reminder.totalCount) completed")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
                 }
+                .padding(.horizontal)
+                .padding(.bottom, 4)
+
+                Divider().padding(.top, 8)
+                Button(role: .destructive) {
+                    showDeleteAlert = true
+                } label: {
+                    HStack {
+                        Spacer()
+                        if isDeleting {
+                            ProgressView().tint(.red)
+                        } else {
+                            Text("Delete Reminder").fontWeight(.medium)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 14)
+                }
+                .foregroundColor(.red)
+                .disabled(isDeleting)
 
                 Spacer(minLength: 40)
             }
@@ -104,50 +133,49 @@ struct ReminderDetailView: View {
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    Task { await markDone() }
+                    showEdit = true
                 } label: {
-                    ZStack {
-                        Circle()
-                            .fill(isDone || reminder.isCompleted ? Color.green : Color.blue)
-                            .frame(width: 32, height: 32)
-                        if isMarking {
-                            ProgressView().tint(.white).scaleEffect(0.7)
-                        } else {
-                            Image(systemName: "checkmark")
-                                .font(.caption)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                        }
-                    }
+                    Image(systemName: "pencil").font(.body)
                 }
-                .disabled(isMarking || isDone || reminder.isCompleted)
             }
         }
-        .onAppear {
-            isDone = reminder.isCompleted
+        // When the edit sheet closes, if a save happened: refresh list and pop back
+        .sheet(isPresented: $showEdit, onDismiss: {
+            if didEdit {
+                onChanged?()
+                dismiss()
+            }
+            didEdit = false
+        }) {
+            AddReminderView(
+                initialElderId: reminder.elderId,
+                editingReminder: reminder,
+                onSaved: { didEdit = true }
+            )
+            .environmentObject(appState)
+        }
+        .alert("Delete Reminder", isPresented: $showDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                Task { await deleteReminder() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Are you sure you want to delete \"\(reminder.title)\"?")
         }
     }
 
-    // MARK: - Mark Done
-    private func markDone() async {
-        guard let token = appState.token,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/reminders/\(reminder.id)/done")
-        else { return }
-
-        isMarking = true
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
-        if let (_, response) = try? await URLSession.shared.data(for: request),
-           let http = response as? HTTPURLResponse, http.statusCode == 200 {
+    private func deleteReminder() async {
+        guard let token = appState.token else { return }
+        isDeleting = true
+        do {
+            try await ReminderRepository.deleteReminder(id: reminder.id, token: token)
             await MainActor.run {
-                isDone = true
-                isMarking = false
-                onMarkDone?()
+                isDeleting = false
+                onChanged?()
+                dismiss()
             }
-        } else {
-            await MainActor.run { isMarking = false }
+        } catch {
+            await MainActor.run { isDeleting = false }
         }
     }
 }

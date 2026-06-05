@@ -49,7 +49,7 @@ class VoIPManager: NSObject {
             return
         }
         
-        guard let url = URL(string: "https://safe-one-backend.vercel.app/api/auth/apns-token") else { return }
+        guard let url = URL(string: "\(AppConfig.baseURL)/auth/apns-token") else { return }
         
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
@@ -178,7 +178,7 @@ extension VoIPManager: CXProviderDelegate {
         Task {
             let roleEndpoint = appState.inActiveCall ? "end" : "decline"
             if let token = appState.token,
-               let url = URL(string: "https://safe-one-backend.vercel.app/api/calls/\(incomingCall.callId)/\(roleEndpoint)") {
+               let url = URL(string: "\(AppConfig.baseURL)/calls/\(incomingCall.callId)/\(roleEndpoint)") {
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")

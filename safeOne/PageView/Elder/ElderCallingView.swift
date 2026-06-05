@@ -203,7 +203,7 @@ struct ElderCallingView: View {
     private func checkCallStatus() async {
         guard let callId = activeCallData?.callId,
               let token = appState.token,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/calls/\(callId)/status")
+              let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/status")
         else { return }
 
         var request = URLRequest(url: url)
@@ -233,7 +233,7 @@ struct ElderCallingView: View {
             return
         }
 
-        guard let url = URL(string: "https://safe-one-backend.vercel.app/api/calls/initiate") else { return }
+        guard let url = URL(string: "\(AppConfig.baseURL)/calls/initiate") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -266,7 +266,7 @@ struct ElderCallingView: View {
     private func endCall() async {
         agoraManager.leaveChannel()
         if let callId = activeCallData?.callId, let token = appState.token {
-            guard let url = URL(string: "https://safe-one-backend.vercel.app/api/calls/\(callId)/end") else { return }
+            guard let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/end") else { return }
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -279,7 +279,7 @@ struct ElderCallingView: View {
     private func cancelCall() async {
         agoraManager.leaveChannel()
         if let callId = activeCallData?.callId, let token = appState.token {
-            guard let url = URL(string: "https://safe-one-backend.vercel.app/api/calls/\(callId)/end") else { return }
+            guard let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/end") else { return }
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")

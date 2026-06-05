@@ -152,7 +152,7 @@ struct ElderProfileView: View {
     // MARK: - Generate OTP
     private func generateOtp() async {
         guard let token = appState.token,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/otp/generate")
+              let url = URL(string: "\(AppConfig.baseURL)/otp/generate")
         else { return }
 
         isGeneratingOtp = true
@@ -282,7 +282,7 @@ struct ElderEditProfileView: View {
     
     private func saveProfile() async {
         guard let token = appState.token,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/users/me")
+              let url = URL(string: "\(AppConfig.baseURL)/users/me")
         else { return }
         
         isSaving = true

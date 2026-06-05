@@ -12,7 +12,13 @@ class AppState: ObservableObject {
     // MARK: - Auth
     @Published var token: String? = nil
     @Published var currentUser: CurrentUser? = nil
-    
+
+    // MARK: - Reminder deep-link (set when user taps a push notification)
+    @Published var pendingReminderDeepLink: String? = nil
+
+    // MARK: - Active reminder alert (full-screen notification for elder)
+    @Published var activeReminderAlert: ReminderNotificationData? = nil
+
     // MARK: - Global Incoming Call State
     @Published var incomingCall: IncomingCallData? = nil
     @Published var inActiveCall: Bool = false
@@ -83,6 +89,12 @@ class AppState: ObservableObject {
     
     @Published var selectedElderIndex: Int = 0
     
+    private var deepLinkObserver: AnyCancellable?
+    private var reminderAlertObserver: AnyCancellable?
+    private var pushTokenObserver: AnyCancellable?
+    // Caches the regular push token in case it arrives before the user logs in
+    private var pendingPushToken: String? = nil
+
     // MARK: - Init (load token dari UserDefaults saat app launch)
     init() {
         if let savedToken = UserDefaults.standard.string(forKey: "jwt_token") {
@@ -91,6 +103,49 @@ class AppState: ObservableObject {
         if let userData = UserDefaults.standard.data(forKey: "current_user"),
            let user = try? JSONDecoder().decode(CurrentUser.self, from: userData) {
             self.currentUser = user
+        }
+
+        deepLinkObserver = NotificationCenter.default
+            .publisher(for: .reminderDeepLink)
+            .compactMap { $0.object as? String }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] reminderId in
+                self?.pendingReminderDeepLink = reminderId
+            }
+
+        reminderAlertObserver = NotificationCenter.default
+            .publisher(for: .reminderAlert)
+            .compactMap { $0.object as? ReminderNotificationData }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] data in
+                self?.activeReminderAlert = data
+            }
+
+        // Regular push token — save for elder users so reminder pushes are deliverable.
+        // Children use VoIP tokens (handled by VoIPManager) for call alerts instead.
+        pushTokenObserver = NotificationCenter.default
+            .publisher(for: .pushTokenRegistered)
+            .compactMap { $0.object as? String }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] pushToken in
+                self?.pendingPushToken = pushToken
+                if self?.isElder == true { self?.savePushToken(pushToken) }
+            }
+    }
+
+    // MARK: - Push token
+
+    private func savePushToken(_ pushToken: String) {
+        guard let authToken = token,
+              let url = URL(string: "\(AppConfig.baseURL)/auth/apns-token") else { return }
+        Task {
+            var req = URLRequest(url: url)
+            req.httpMethod = "PATCH"
+            req.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = try? JSONSerialization.data(withJSONObject: ["apnsToken": pushToken])
+            _ = try? await URLSession.shared.data(for: req)
+            print("✅ Regular push token saved for elder")
         }
     }
     
@@ -103,6 +158,10 @@ class AppState: ObservableObject {
         UserDefaults.standard.set(token, forKey: "jwt_token")
         if let encoded = try? JSONEncoder().encode(user) {
             UserDefaults.standard.set(encoded, forKey: "current_user")
+        }
+        // If elder just logged in and we already have the push token, send it now
+        if user.role == "elder", let pushToken = pendingPushToken {
+            savePushToken(pushToken)
         }
     }
     
@@ -173,7 +232,7 @@ class AppState: ObservableObject {
         guard !inActiveCall, incomingCall == nil else { return }
         
         guard let token = self.token else { return }
-        guard let url = URL(string: "https://safe-one-backend.vercel.app/api/calls/pending") else { return }
+        guard let url = URL(string: "\(AppConfig.baseURL)/calls/pending") else { return }
         
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -206,6 +265,17 @@ class AppState: ObservableObject {
 }
 
 // MARK: - Models
+
+/// Data extracted from a reminder push-notification payload.
+/// Carries enough info to show the full-screen alert without a network fetch.
+struct ReminderNotificationData: Identifiable {
+    let id: String          // reminderId
+    let title: String
+    let notes: String?
+    let imageName: String?
+    let time: String        // ISO-8601 date string from the backend
+    let category: String?
+}
 
 struct CurrentUser: Codable {
     let id: String

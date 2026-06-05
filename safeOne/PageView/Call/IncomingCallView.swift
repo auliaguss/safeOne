@@ -184,7 +184,7 @@ struct IncomingCallView: View {
         await MainActor.run { appState.inActiveCall = true }
         
         guard let token = appState.token,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/calls/\(callId)/answer")
+              let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/answer")
         else {
             await MainActor.run { appState.inActiveCall = false }
             return
@@ -218,7 +218,7 @@ struct IncomingCallView: View {
     // MARK: - Decline
     private func declineCall() async {
         guard let token = appState.token else { return }
-        guard let url = URL(string: "https://safe-one-backend.vercel.app/api/calls/\(callId)/decline") else { return }
+        guard let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/decline") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -244,7 +244,7 @@ struct IncomingCallView: View {
         }
 
         guard let token = appState.token,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/calls/\(callId)/end") else {
+              let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/end") else {
             dismiss()
             return
         }
@@ -262,7 +262,7 @@ struct IncomingCallView: View {
     // MARK: - Check Call Status
     private func checkCallStatus() async {
         guard let token = appState.token,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/calls/\(callId)/status")
+              let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/status")
         else { return }
 
         var request = URLRequest(url: url)

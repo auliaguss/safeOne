@@ -10,7 +10,7 @@ import Foundation
 
 class CallService {
     static let shared = CallService()
-    private let baseURL = "http://safe-one-backend.vercel.app/api"
+    private let baseURL = AppConfig.baseURL
 
     // Elder: initiate call
     func initiateCall(token: String) async throws -> InitiateCallResponse {

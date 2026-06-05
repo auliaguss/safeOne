@@ -9,14 +9,15 @@ import SwiftUI
 
 @main
 struct safeOneApp: App {
-    // Inisialisasi AppState agar hidup selama aplikasi berjalan
+    // Receives the regular push token via didRegisterForRemoteNotificationsWithDeviceToken
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     @StateObject private var appState = AppState()
-    
-    // Inisialisasi instance VoIPManager agar PushKit & CallKit aktif sejak awal aplikasi terbuka
     private let voipManager = VoIPManager.shared
     
     init() {
         _ = VoIPManager.shared
+        NotificationManager.shared.setup()
     }
     
     var body: some Scene {
@@ -33,7 +34,20 @@ struct safeOneApp: App {
                     .zIndex(0)
                 
                 // ==========================================
-                // LAYER 2: GLOBAL OVERLAY PANGGILAN MASUK
+                // LAYER 2: FULL-SCREEN REMINDER (ELDER)
+                // ==========================================
+                // Covers everything when a reminder push notification fires.
+                // Auto-reads the title via text-to-speech.
+                if let reminder = appState.activeReminderAlert, appState.isElder {
+                    ElderReminderFullScreenView(reminder: reminder)
+                        .environmentObject(appState)
+                        .background(Color.white.ignoresSafeArea())
+                        .zIndex(998)
+                        .transition(.opacity)
+                }
+
+                // ==========================================
+                // LAYER 3: GLOBAL OVERLAY PANGGILAN MASUK
                 // ==========================================
                 // Karena ini diletakkan di level @main dengan zIndex tinggi,
                 // layer ini dijamin akan menimpa seluruh layar (termasuk saat membuka Elder List).

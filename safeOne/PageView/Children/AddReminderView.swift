@@ -10,14 +10,20 @@ struct AddReminderView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
 
-    var elderId: String?
+    var initialElderId: String? = nil
+    var editingReminder: APIReminder? = nil
     var onSaved: (() -> Void)? = nil
+
+    @State private var selectedElderId: String?
+    @State private var elders: [ElderItem] = []
+    @State private var isLoadingElders = false
 
     @State private var title: String = ""
     @State private var notes: String = ""
     @State private var selectedDate: Date = Date()
     @State private var selectedTime: Date = Date()
-    @State private var repeatOption: RepeatOption = .none
+    // 0=Sun 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat — default all selected (like iOS alarm)
+    @State private var selectedDays: Set<Int> = Set(0...6)
     @State private var earlyReminder: EarlyReminderOption = .none
     @State private var category: ReminderCategory = .none
     @State private var selectedEmoji: String = "💊"
@@ -26,19 +32,67 @@ struct AddReminderView: View {
     @State private var isSaving = false
     @State private var errorMessage: String? = nil
 
-    // Photo picker
     @State private var selectedPhoto: PhotosPickerItem? = nil
     @State private var selectedImage: UIImage? = nil
     @State private var usePhoto = false
 
     let emojiOptions: [String] = ["💊", "🩺", "🏃", "🍎", "💉", "🩹", "🧘", "🚶"]
 
+    private var isEditing: Bool { editingReminder != nil }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
 
-                    // Photo / Emoji Picker
+                    // --- Elder Picker Pills ---
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Assign to Elder")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+                            .padding(.top, 16)
+
+                        if isLoadingElders {
+                            ProgressView()
+                                .padding(.horizontal)
+                                .padding(.bottom, 4)
+                        } else if elders.isEmpty {
+                            Text("No elders connected")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal)
+                        } else {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 10) {
+                                    ForEach(elders) { elder in
+                                        Button {
+                                            selectedElderId = elder.id
+                                        } label: {
+                                            HStack(spacing: 6) {
+                                                if let avatar = elder.avatar, !avatar.isEmpty {
+                                                    Text(avatar).font(.caption)
+                                                }
+                                                Text(elder.name)
+                                                    .font(.subheadline)
+                                            }
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 7)
+                                            .background(selectedElderId == elder.id ? Color.blue : Color(.systemGray5))
+                                            .foregroundColor(selectedElderId == elder.id ? .white : .primary)
+                                            .clipShape(Capsule())
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
+                    }
+                    .padding(.bottom, 12)
+
+                    Divider()
+
+                    // --- Photo / Emoji Picker ---
                     VStack(spacing: 8) {
                         ZStack {
                             Circle()
@@ -57,10 +111,8 @@ struct AddReminderView: View {
                             }
                         }
 
-                        // Emoji row
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
-                                // Tombol pilih dari galeri
                                 PhotosPicker(selection: $selectedPhoto, matching: .images) {
                                     ZStack {
                                         Circle()
@@ -162,13 +214,44 @@ struct AddReminderView: View {
 
                     SectionHeader(title: "Reminder")
 
-                    Menu {
-                        ForEach(RepeatOption.allCases, id: \.self) { option in
-                            Button(option.rawValue) { repeatOption = option }
-                        }
-                    } label: {
-                        FormPickerRowDisplay(label: "Repeat", value: repeatOption.rawValue)
+                    // Repeat — alarm-style day picker
+                    HStack {
+                        Text("Repeat")
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(repeatLabel)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
+                    .padding(.horizontal)
+                    .padding(.top, 14)
+                    .padding(.bottom, 8)
+
+                    HStack(spacing: 0) {
+                        ForEach(0..<7, id: \.self) { dow in
+                            Spacer(minLength: 2)
+                            Button {
+                                if selectedDays.contains(dow) {
+                                    selectedDays.remove(dow)
+                                } else {
+                                    selectedDays.insert(dow)
+                                }
+                            } label: {
+                                Text(["S","M","T","W","T","F","S"][dow])
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(selectedDays.contains(dow) ? .white : .primary)
+                                    .frame(width: 38, height: 38)
+                                    .background(
+                                        Circle()
+                                            .fill(selectedDays.contains(dow) ? Color.blue : Color(.systemGray5))
+                                    )
+                            }
+                            Spacer(minLength: 2)
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.bottom, 14)
 
                     Divider().padding(.leading)
 
@@ -201,7 +284,7 @@ struct AddReminderView: View {
                     }
                 }
                 ToolbarItem(placement: .principal) {
-                    Text("Add Reminder").font(.headline)
+                    Text(isEditing ? "Edit Reminder" : "Add Reminder").font(.headline)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { Task { await saveReminder() } }) {
@@ -222,14 +305,114 @@ struct AddReminderView: View {
                     .disabled(title.isEmpty || isSaving)
                 }
             }
+            .task {
+                prefillFields()
+                await fetchElders()
+            }
         }
     }
 
+    // MARK: - Repeat helpers
+
+    private var repeatLabel: String {
+        if selectedDays.isEmpty   { return "Never" }
+        if selectedDays.count == 7 { return "Every day" }
+        let names = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+        return selectedDays.sorted().map { names[$0] }.joined(separator: ", ")
+    }
+
+    private var repeatOptionValue: String {
+        if selectedDays.isEmpty   { return "none" }
+        if selectedDays.count == 7 { return "everyday" }
+        return "days:" + selectedDays.sorted().map(String.init).joined(separator: ",")
+    }
+
+    // Convert a stored repeat_option string back to a Set<Int> of DOW values (0=Sun…6=Sat)
+    private static func parseDays(_ repeatOption: String, date: Date?) -> Set<Int> {
+        switch repeatOption.lowercased() {
+        case "none":     return Set()
+        case "everyday": return Set(0...6)
+        case "weekly":
+            if let d = date {
+                // Calendar.weekday is 1-based Sun=1 → convert to 0-based
+                let wd = Calendar(identifier: .gregorian).component(.weekday, from: d) - 1
+                return Set([wd])
+            }
+            return Set(0...6)
+        case "monthly":
+            return Set(0...6)
+        default:
+            if repeatOption.hasPrefix("days:") {
+                let nums = repeatOption.dropFirst(5).split(separator: ",").compactMap { Int($0) }
+                return Set(nums.filter { (0...6).contains($0) })
+            }
+            return Set(0...6)
+        }
+    }
+
+    // Handles both "2026-06-05T09:00:00Z" and "2026-06-05T09:00:00.000Z" from PostgreSQL
+    private static func parseDate(_ string: String) -> Date? {
+        let withMs = ISO8601DateFormatter()
+        withMs.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return withMs.date(from: string) ?? ISO8601DateFormatter().date(from: string)
+    }
+
+    // MARK: - Prefill for Edit Mode
+    private func prefillFields() {
+        guard let r = editingReminder else {
+            selectedElderId = initialElderId
+            return
+        }
+        title = r.title
+        notes = r.notes ?? ""
+        selectedEmoji = r.imageName ?? "💊"
+        selectedElderId = r.elderId ?? initialElderId
+
+        if let d = Self.parseDate(r.date) {
+            selectedDate = d
+            selectedTime = d
+        }
+
+        selectedDays = Self.parseDays(r.repeatOption, date: Self.parseDate(r.date))
+
+        if let ea = r.earlyReminder {
+            earlyReminder = EarlyReminderOption.allCases.first {
+                $0.rawValue.lowercased() == ea.lowercased()
+            } ?? .none
+        }
+
+        if let cat = r.category {
+            category = ReminderCategory.allCases.first {
+                $0.rawValue.lowercased() == cat.lowercased()
+            } ?? .none
+        }
+    }
+
+    // MARK: - Fetch Elders
+    private func fetchElders() async {
+        guard let token = appState.token else { return }
+        isLoadingElders = true
+        do {
+            let decoded = try await ReminderRepository.fetchElders(token: token)
+            await MainActor.run {
+                elders = decoded
+                if selectedElderId == nil {
+                    selectedElderId = initialElderId ?? decoded.first?.id
+                }
+                isLoadingElders = false
+            }
+        } catch {
+            await MainActor.run { isLoadingElders = false }
+        }
+    }
+
+    // MARK: - Save (Create or Update)
     private func saveReminder() async {
-        guard let token = appState.token,
-              let targetElderId = elderId,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/reminders")
-        else {
+        guard let token = appState.token else {
+            errorMessage = "Sesi tidak valid, silakan login ulang."
+            return
+        }
+        guard let targetElderId = selectedElderId else {
             errorMessage = "Pilih elder terlebih dahulu"
             return
         }
@@ -244,51 +427,33 @@ struct AddReminderView: View {
         comps.minute = timeComps.minute
         let finalDate = cal.date(from: comps) ?? selectedDate
 
-        // Kalau pakai foto, encode ke base64 dan simpan sebagai imageName
-        // Backend saat ini menerima imageName sebagai string — tetap kirim emoji
-        // Foto hanya ditampilkan lokal (backend belum support upload gambar)
-        let imageNameToSend = usePhoto ? "🖼️" : selectedEmoji
-
         let body: [String: Any] = [
             "elderId": targetElderId,
             "title": title,
             "notes": notes,
             "date": ISO8601DateFormatter().string(from: finalDate),
-            "repeatOption": repeatOption.rawValue.lowercased(),
+            "repeatOption": repeatOptionValue,
             "earlyReminder": earlyReminder.rawValue,
             "category": category.rawValue.lowercased(),
             "totalCount": 1,
-            "imageName": imageNameToSend
+            "imageName": usePhoto ? "🖼️" : selectedEmoji
         ]
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-        if let (data, response) = try? await URLSession.shared.data(for: request),
-           let http = response as? HTTPURLResponse {
-            let raw = String(data: data, encoding: .utf8) ?? "nil"
-            print("📡 Status: \(http.statusCode)")
-            print("📦 Response: \(raw)")
-            
-            if http.statusCode == 201 {
-                await MainActor.run {
-                    isSaving = false
-                    onSaved?()
-                    dismiss()
-                }
+        do {
+            if let r = editingReminder {
+                _ = try await ReminderRepository.updateReminder(id: r.id, body, token: token)
             } else {
-                await MainActor.run {
-                    isSaving = false
-                    errorMessage = "Gagal (\(http.statusCode)): \(raw)"
-                }
+                _ = try await ReminderRepository.createReminder(body, token: token)
             }
-        } else {
             await MainActor.run {
                 isSaving = false
-                errorMessage = "Network error"
+                onSaved?()
+                dismiss()
+            }
+        } catch {
+            await MainActor.run {
+                isSaving = false
+                errorMessage = "Gagal: \(error.localizedDescription)"
             }
         }
     }

@@ -1,21 +1,38 @@
 //
 //  ReminderListView.swift
-//  safeOne
+//  ElderCareApp
+//
+//  Created by Hercio Venceslau Silla on 28/05/26.
 //
 
 import SwiftUI
 
+private enum ListSheet: Identifiable {
+    case create
+    case edit(APIReminder)
+    var id: String {
+        switch self {
+        case .create:      return "create"
+        case .edit(let r): return "edit-\(r.id)"
+        }
+    }
+}
+
 struct ReminderListView: View {
     @EnvironmentObject var appState: AppState
-    @State private var showAddReminder = false
+
+    @State private var activeSheet: ListSheet? = nil
     @State private var showPastReminders = false
+
+    // Backend data
+    @State private var elders: [ElderItem] = []
+    @State private var selectedElderId: String? = nil
     @State private var reminders: [APIReminder] = []
     @State private var isLoading = false
-    @State private var selectedElderId: String? = nil
-    @State private var elders: [ElderItem] = []
+    @State private var initialLoadDone = false
 
     var activeReminders: [APIReminder] { reminders.filter { !$0.isPast } }
-    var pastReminders: [APIReminder] { reminders.filter { $0.isPast } }
+    var pastReminders: [APIReminder]   { reminders.filter { $0.isPast } }
 
     var body: some View {
         NavigationStack {
@@ -25,7 +42,7 @@ struct ReminderListView: View {
                     Text("Reminder")
                         .font(.headline)
                     Spacer()
-                    Button(action: { showAddReminder = true }) {
+                    Button(action: { activeSheet = .create }) {
                         ZStack {
                             Circle()
                                 .fill(selectedElderId != nil ? Color.blue : Color(.systemGray4))
@@ -40,35 +57,30 @@ struct ReminderListView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 12)
 
-                // Elder Selector
-                if elders.isEmpty {
-                    Text("Belum ada elder yang terhubung")
-                        .foregroundColor(.secondary)
-                        .font(.subheadline)
-                        .padding(.horizontal)
-                        .padding(.bottom, 12)
-                } else {
+                // Elder Selector — same pill style as ElderSelectorView in Sharedcomponents
+                if !elders.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
                             ForEach(elders) { elder in
                                 Button {
-                                    selectedElderId = elder.id
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        selectedElderId = elder.id
+                                    }
                                     Task { await fetchReminders() }
                                 } label: {
-                                    HStack(spacing: 6) {
-                                        if let avatar = elder.avatar, !avatar.isEmpty {
-                                            Text(avatar).font(.caption)
-                                        }
-                                        Text(elder.name)
-                                            .font(.subheadline)
-                                    }
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 7)
-                                    .background(selectedElderId == elder.id ? Color.blue : Color(.systemGray5))
-                                    .foregroundColor(selectedElderId == elder.id ? .white : .primary)
-                                    .clipShape(Capsule())
+                                    Text(elder.name)
+                                        .font(.subheadline)
+                                        .fontWeight(selectedElderId == elder.id ? .semibold : .regular)
+                                        .foregroundColor(selectedElderId == elder.id ? .white : .primary)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(
+                                            Capsule()
+                                                .fill(selectedElderId == elder.id ? Color.black : Color(.systemGray5))
+                                        )
                                 }
                             }
+                            Spacer()
                         }
                         .padding(.horizontal)
                     }
@@ -79,28 +91,21 @@ struct ReminderListView: View {
 
                 if isLoading {
                     Spacer()
-                    ProgressView("Memuat reminders...")
+                    ProgressView()
                     Spacer()
                 } else {
                     ScrollView {
                         VStack(spacing: 0) {
                             ForEach(activeReminders) { reminder in
-                                NavigationLink(destination: ReminderDetailView(
-                                    reminder: reminder,
-                                    onMarkDone: { Task { await fetchReminders() } }
-                                )) {
+                                Button { activeSheet = .edit(reminder) } label: {
                                     ReminderListRow(reminder: reminder)
                                 }
                                 .buttonStyle(PlainButtonStyle())
-                                Divider().padding(.leading, 72)
+                                Divider()
+                                    .padding(.leading, 72)
                             }
 
-                            if activeReminders.isEmpty && selectedElderId != nil {
-                                Text("Tidak ada reminder untuk hari ini")
-                                    .foregroundColor(.secondary)
-                                    .padding(.top, 40)
-                            }
-
+                            // Past Reminders toggle
                             Button(action: { showPastReminders.toggle() }) {
                                 HStack(spacing: 4) {
                                     Text("See Past Reminders")
@@ -116,8 +121,12 @@ struct ReminderListView: View {
 
                             if showPastReminders {
                                 ForEach(pastReminders) { reminder in
-                                    ReminderListRow(reminder: reminder, isPast: true)
-                                    Divider().padding(.leading, 72)
+                                    Button { activeSheet = .edit(reminder) } label: {
+                                        ReminderListRow(reminder: reminder, isPast: true)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    Divider()
+                                        .padding(.leading, 72)
                                 }
                             }
                         }
@@ -125,115 +134,67 @@ struct ReminderListView: View {
                 }
             }
             .navigationBarHidden(true)
-            .sheet(isPresented: $showAddReminder) {
-                AddReminderView(elderId: selectedElderId, onSaved: {
-                    Task { await fetchReminders() }
-                })
-                .environmentObject(appState)
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .create:
+                    AddReminderView(initialElderId: selectedElderId, onSaved: {
+                        Task { await fetchReminders() }
+                    })
+                    .environmentObject(appState)
+                case .edit(let reminder):
+                    AddReminderView(
+                        initialElderId: reminder.elderId,
+                        editingReminder: reminder,
+                        onSaved: { Task { await fetchReminders() } }
+                    )
+                    .environmentObject(appState)
+                }
             }
-            .task {
-                await fetchElders()
-            }
+        }
+        // Initial load
+        .task {
+            await fetchElders()
+            initialLoadDone = true
+        }
+        // Refresh when navigating back from detail
+        .onAppear {
+            guard initialLoadDone else { return }
+            Task { await fetchReminders() }
         }
     }
 
+    // MARK: - Data
+
     private func fetchElders() async {
-        guard let token = appState.token,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/users/me/elders")
-        else { return }
-
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
-        guard let (data, _) = try? await URLSession.shared.data(for: request),
-              let decoded = try? JSONDecoder().decode([ElderItem].self, from: data)
-        else { return }
-
-        await MainActor.run {
-            elders = decoded
-            if selectedElderId == nil { selectedElderId = decoded.first?.id }
+        guard let token = appState.token else { return }
+        isLoading = true
+        do {
+            let decoded = try await ReminderRepository.fetchElders(token: token)
+            await MainActor.run {
+                elders = decoded
+                if selectedElderId == nil { selectedElderId = decoded.first?.id }
+                isLoading = false
+            }
+            await fetchReminders()
+        } catch {
+            await MainActor.run { isLoading = false }
         }
-        await fetchReminders()
     }
 
     private func fetchReminders() async {
         guard let token = appState.token, let elderId = selectedElderId else { return }
-
-        let formatter = ISO8601DateFormatter()
-        let today = formatter.string(from: Date())
-        guard let encodedDate = today.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/reminders?elderId=\(elderId)&date=\(encodedDate)")
-        else { return }
-
-        isLoading = true
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
-        if let (data, _) = try? await URLSession.shared.data(for: request),
-           let decoded = try? JSONDecoder().decode([APIReminder].self, from: data) {
-            await MainActor.run {
-                reminders = decoded
-                isLoading = false
-            }
-        } else {
-            await MainActor.run { isLoading = false }
-        }
-    }
-}
-
-// MARK: - Models
-struct ElderItem: Codable, Identifiable {
-    let id: String
-    let name: String
-    let avatar: String?
-}
-
-struct APIReminder: Codable, Identifiable {
-    let id: String
-    let title: String
-    let notes: String?
-    let date: String
-    let repeatOption: String
-    let earlyReminder: String?
-    let category: String?
-    let isCompleted: Bool
-    let completedCount: Int
-    let totalCount: Int
-    let imageName: String?
-
-    var isPast: Bool {
-        guard let d = ISO8601DateFormatter().date(from: date) else { return false }
-        return d < Date()
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case id, title, notes, date
-        case repeatOption  = "repeat_option"
-        case earlyReminder = "early_reminder"
-        case category
-        case isCompleted   = "is_completed"
-        case completedCount = "completed_count"
-        case totalCount    = "total_count"
-        case imageName     = "image_name"
+        do {
+            let decoded = try await ReminderRepository.fetchReminders(elderId: elderId, token: token)
+            await MainActor.run { reminders = decoded }
+        } catch {}
     }
 }
 
 // MARK: - Reminder List Row
+
 struct ReminderListRow: View {
     let reminder: APIReminder
     var isPast: Bool = false
-
-    var subtitleString: String {
-        guard let d = ISO8601DateFormatter().date(from: reminder.date) else { return "" }
-        let fmt = DateFormatter()
-        if reminder.repeatOption == "everyday" {
-            fmt.dateFormat = "HH.mm"
-            return "Everyday, \(fmt.string(from: d))"
-        } else {
-            fmt.dateFormat = "d MMM, HH.mm"
-            return fmt.string(from: d)
-        }
-    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -251,17 +212,12 @@ struct ReminderListRow: View {
                     .font(.body)
                     .fontWeight(.medium)
                     .foregroundColor(isPast ? .secondary : .primary)
-                Text(subtitleString)
+                Text(reminder.subtitleString)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
 
             Spacer()
-
-            if reminder.isCompleted {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-            }
 
             Image(systemName: "chevron.right")
                 .font(.caption)
@@ -271,4 +227,9 @@ struct ReminderListRow: View {
         .padding(.vertical, 14)
         .background(Color(.systemBackground))
     }
+}
+
+#Preview {
+    ReminderListView()
+        .environmentObject(AppState())
 }

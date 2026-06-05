@@ -179,7 +179,7 @@ struct EditProfileView: View {
 
     private func saveProfile() async {
         guard let token = appState.token,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/users/me")
+              let url = URL(string: "\(AppConfig.baseURL)/users/me")
         else { return }
 
         isSaving = true
@@ -299,7 +299,7 @@ struct ElderListView: View {
 
     private func fetchElders() async {
         guard let token = appState.token,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/users/me/elders")
+              let url = URL(string: "\(AppConfig.baseURL)/users/me/elders")
         else { return }
 
         isLoading = true
@@ -319,7 +319,7 @@ struct ElderListView: View {
 
     private func removeElder(_ elderId: String) async {
         guard let token = appState.token,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/users/me/elders/\(elderId)")
+              let url = URL(string: "\(AppConfig.baseURL)/users/me/elders/\(elderId)")
         else { return }
 
         var request = URLRequest(url: url)
@@ -336,7 +336,7 @@ struct ElderListView: View {
 
     private func verifyOtp() async {
         guard let token = appState.token,
-              let url = URL(string: "https://safe-one-backend.vercel.app/api/otp/verify")
+              let url = URL(string: "\(AppConfig.baseURL)/otp/verify")
         else { return }
 
         var request = URLRequest(url: url)
