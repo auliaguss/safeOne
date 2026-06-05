@@ -137,15 +137,8 @@ struct IncomingCallView: View {
                                 .background(Color.red)
                                 .clipShape(Circle())
                         }
-
-                        Button { showSOS = true } label: {
-                            Text("SOS")
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundColor(.white)
-                                .frame(width: 56, height: 56)
-                                .background(Color.orange)
-                                .clipShape(Circle())
-                        }
+                        
+                        Spacer().frame(width: 56, height: 56)
                     }
                     .padding(.bottom, 48)
                 }

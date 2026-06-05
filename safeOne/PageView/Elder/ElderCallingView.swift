@@ -79,14 +79,8 @@ struct ElderCallingView: View {
                                 .shadow(color: Color(hex: "FF3B30").opacity(0.3), radius: 8, x: 0, y: 4)
                         }
 
-                        Button { agoraManager.toggleVideo() } label: {
-                            Image(systemName: agoraManager.isLocalVideoMuted ? "video.slash.fill" : "video.fill")
-                                .font(.title2)
-                                .foregroundColor(.white)
-                                .frame(width: 56, height: 56)
-                                .background(Color.white.opacity(0.2))
-                                .clipShape(Circle())
-                        }
+                        
+                        Spacer().frame(width: 56, height: 56)
                     }
                     .padding(.bottom, 48)
                 }
