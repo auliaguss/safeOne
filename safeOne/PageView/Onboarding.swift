@@ -13,6 +13,7 @@ struct Onboarding: View {
     @State private var navigateToChild = false
     @State private var isLoading = false
     @State private var isCheckingUser = true // Menandakan sedang cek user otomatis
+    @State private var navigateToSetupProfile = false
     @State private var errorMessage: String? = nil
 
     var body: some View {
@@ -147,6 +148,10 @@ struct Onboarding: View {
             .navigationDestination(isPresented: $navigateToChild) {
                 ContentView(appState: _appState)
             }
+            .navigationDestination(isPresented: $navigateToSetupProfile) {
+                SetupProfileView()
+                    .environmentObject(appState)
+            }
         }
         .navigationBarBackButtonHidden(true)
         // Jalankan pengecekan otomatis saat layar muncul
@@ -187,10 +192,18 @@ struct Onboarding: View {
                         
                         await MainActor.run {
                             appState.saveSession(token: token, user: user)
-                            if userRole == "elder" {
-                                navigateToElder = true
+                            isCheckingUser = false
+                            
+                            let isProfileComplete = !(userName.isEmpty) && !(userDict["avatar"] as? String ?? "").isEmpty
+                            
+                            if isProfileComplete {
+                                if userRole == "elder" {
+                                    navigateToElder = true
+                                } else {
+                                    navigateToChild = true
+                                }
                             } else {
-                                navigateToChild = true
+                                navigateToSetupProfile = true
                             }
                         }
                     }
@@ -269,11 +282,7 @@ struct Onboarding: View {
                 await MainActor.run {
                     appState.saveSession(token: token, user: user)
                     isLoading = false
-                    if userRole == "elder" {
-                        navigateToElder = true
-                    } else {
-                        navigateToChild = true
-                    }
+                    navigateToSetupProfile = true  // ← selalu ke setup profile dulu
                 }
 
             } else {

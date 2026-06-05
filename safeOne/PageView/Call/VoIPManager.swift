@@ -13,11 +13,10 @@ class VoIPManager: NSObject {
     
     var appState: AppState?
     private var currentCallUUID: UUID?
-    private var pendingCallData: IncomingCallData?  // ← tambah ini
+    private var pendingCallData: IncomingCallData?
     private var pendingAnswerAction: CXAnswerCallAction?
-    
-    
-    
+    private var pendingVoipToken: String? = nil  // ← tambah ini
+
     override init() {
         super.init()
         setupCallKit()
@@ -50,15 +49,29 @@ class VoIPManager: NSObject {
         pushRegistry?.desiredPushTypes = [.voIP]
     }
     
-    
-    
+    // ← Dipanggil dari AppState.saveSession setelah login
+    func flushPendingVoipToken() async {
+        print("🔄 flushPendingVoipToken — pendingVoipToken: \(pendingVoipToken ?? "nil")")
+        guard let token = pendingVoipToken,
+              let jwtToken = appState?.token else {
+            print("⚠️ flush gagal — token: \(pendingVoipToken ?? "nil"), jwt: \(appState?.token != nil)")
+            return
+        }
+        pendingVoipToken = nil
+        await sendVoipTokenToBackend(token: token, jwtToken: jwtToken)
+    }
+
     private func sendVoipTokenToBackend(token: String) async {
         guard let appState = self.appState,
               let jwtToken = appState.token else {
             print("⏳ Menunggu user login untuk menyimpan token VoIP...")
+            pendingVoipToken = token  // ← simpan dulu
             return
         }
-        
+        await sendVoipTokenToBackend(token: token, jwtToken: jwtToken)
+    }
+    
+    private func sendVoipTokenToBackend(token: String, jwtToken: String) async {
         guard let url = URL(string: "\(AppConfig.baseURL)/auth/apns-token") else { return }
         
         var request = URLRequest(url: url)
@@ -70,11 +83,17 @@ class VoIPManager: NSObject {
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         
         do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            if let http = response as? HTTPURLResponse, http.statusCode == 200 {
-                print("✅ VoIP Token sukses disimpan ke Database Backend!")
-            } else {
-                print("❌ Gagal menyimpan VoIP Token ke Backend.")
+            let (data, response) = try await URLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse {
+                print("📡 VoIP token response: \(http.statusCode)")
+                if http.statusCode == 200 {
+                    print("✅ VoIP Token sukses disimpan ke Database Backend!")
+                } else if http.statusCode == 401 {
+                    print("⚠️ JWT invalid, simpan untuk retry setelah login")
+                    pendingVoipToken = token  // ← tambah ini
+                } else {
+                    print("❌ Gagal menyimpan VoIP Token. Status: \(http.statusCode)")
+                }
             }
         } catch {
             print("❌ Error jaringan saat menyimpan VoIP Token: \(error)")
@@ -117,16 +136,9 @@ extension VoIPManager: PKPushRegistryDelegate {
         
         DispatchQueue.main.async {
             guard let appState = self.appState else { return }
-            appState.incomingCall = IncomingCallData(
-                callId: callId,
-                elderName: elderName,
-                channelName: channelName,
-                agoraToken: "",
-                agoraAppId: agoraAppId
-            )
-            self.pendingCallData = callData      // ← simpan backup
+            self.pendingCallData = callData
             appState.incomingCall = callData
-            appState.stopPolling()  // ← stop polling saat push masuk
+            appState.stopPolling()
         }
         
         let update = CXCallUpdate()
@@ -152,8 +164,6 @@ extension VoIPManager: CXProviderDelegate {
     func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
         print("🔊 didActivate — waktu: \(Date())")
         print("🔊 CallKit: Audio Session Diaktifkan")
-        
-        // ← Ini momen yang tepat untuk Agora join
         DispatchQueue.main.async {
             AgoraManager.shared.executePendingJoin()
         }
@@ -163,34 +173,26 @@ extension VoIPManager: CXProviderDelegate {
         print("🔇 CallKit: Audio Session Dimatikan")
     }
     
-    // User answer dari CallKit → fulfill langsung, app terbuka, user lihat IncomingCallView
     func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
         print("📲 User answer dari CallKit — buka layar Terima/Tolak")
         
-        //        pendingAnswerAction = action  // ← simpan, belum fulfill
-        
-        
         DispatchQueue.main.async {
             guard let appState = self.appState else { return }
-            
-            // Jika incomingCall sudah nil (kena clear), restore dari backup
             if appState.incomingCall == nil, let pending = self.pendingCallData {
                 appState.incomingCall = pending
                 appState.stopPolling()
             }
-            
         }
         
         action.fulfill()
     }
     
-    // User tolak/akhiri dari CallKit
     func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
         print("📴 Panggilan diakhiri dari CallKit")
         AgoraManager.shared.leaveChannel()
         
         guard let appState = self.appState, let incomingCall = appState.incomingCall else {
-            self.pendingCallData = nil  // ← clear
+            self.pendingCallData = nil
             action.fulfill()
             return
         }
@@ -208,7 +210,7 @@ extension VoIPManager: CXProviderDelegate {
             await MainActor.run {
                 appState.inActiveCall = false
                 appState.incomingCall = nil
-                self.pendingCallData = nil  // ← clear backup
+                self.pendingCallData = nil
                 action.fulfill()
             }
         }

@@ -164,6 +164,9 @@ class AppState: ObservableObject {
         if let pushToken = pendingPushToken {
             savePushToken(pushToken)
         }
+        
+        Task { await VoIPManager.shared.flushPendingVoipToken() }
+
     }
     
     /// Dipanggil saat logout
