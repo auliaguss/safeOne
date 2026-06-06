@@ -57,26 +57,23 @@ struct ProfileView: View {
                 }
 
                 // Notification
-                Section("Notification") {
-                    HStack {
-                        Text("Alerts")
-                        Spacer()
-                        Text(alertsValue)
-                            .foregroundColor(.secondary)
-                            .font(.subheadline)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
+                // Section("Notification") {
+                //     HStack {
+                //         Text("Alerts")
+                //         Spacer()
+                //         Text(alertsValue)
+                //             .foregroundColor(.secondary)
+                //             .font(.subheadline)
+                //         Image(systemName: "chevron.up.chevron.down")
+                //             .font(.caption2)
+                //             .foregroundColor(.secondary)
+                //     }
+                // }
 
                 // General
                 Section("General") {
-                    NavigationLink("Emergency Services") {
-                        Text("Emergency Services").navigationTitle("Emergency Services")
-                    }
                     NavigationLink("Data & Privacy") {
-                        Text("Data & Privacy").navigationTitle("Data & Privacy")
+                        DataPrivacyView()
                     }
                 }
 

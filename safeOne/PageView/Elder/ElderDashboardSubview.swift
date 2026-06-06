@@ -31,16 +31,18 @@ struct ElderDashboardSubview: View {
                                 ForEach(reminders) { item in
                                     Button(action: { selectedReminder = item }) {
                                         HStack(spacing: 16) {
-                                            ZStack {
-                                                Color(hex: "E8F3FF").frame(width: 48, height: 48).cornerRadius(12)
-                                                Text(item.imageName ?? "💊").font(.title2)
-                                            }
+                                            ReminderImageView(
+                                                imageName: item.imageName,
+                                                size: 48,
+                                                background: Color(hex: "E8F3FF"),
+                                                cornerRadius: 12
+                                            )
                                             VStack(alignment: .leading, spacing: 2) {
                                                 Text(item.title).font(.body).fontWeight(.bold).foregroundColor(.black)
                                                 if let notes = item.notes, !notes.isEmpty {
                                                     Text(notes).font(.caption).foregroundColor(.gray)
                                                 }
-                                                Text(item.formattedTime).font(.subheadline).foregroundColor(.gray)
+                                                Text(item.timesText).font(.subheadline).foregroundColor(.gray)
                                             }
                                             Spacer()
                                             Text(item.statusText)

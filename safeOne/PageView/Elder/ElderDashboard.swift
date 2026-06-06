@@ -59,13 +59,10 @@ struct ElderDashboard: View {
                         }
 
                         if !activeToday.isEmpty {
-                            reminderSection("Active", items: activeToday, tappable: true, completed: false)
+                            reminderSection("Today's Reminder", items: activeToday, tappable: true, completed: false)
                         }
                         if !doneToday.isEmpty {
                             reminderSection("Done Today", items: doneToday, tappable: false, completed: true)
-                        }
-                        if !vm.tomorrowReminders.isEmpty {
-                            reminderSection("Upcoming", items: vm.tomorrowReminders, tappable: false, completed: false)
                         }
                     }
 
@@ -190,28 +187,47 @@ struct ElderReminderCard: View {
     var isCompleted: Bool = false
     var onTap: (() -> Void)? = nil
 
-    private var displayTime: String {
-        guard let d = APIReminder.parseDate(reminder.date) else { return "" }
-        if !Calendar.current.isDateInToday(d) {
-            let fmt = DateFormatter()
-            fmt.dateFormat = "EEE, HH:mm"
-            return fmt.string(from: d)
+    private var incomingText: String? {
+        guard !isCompleted else { return nil }
+        let now = Date()
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(abbreviation: "UTC")!
+        let todayUTC = cal.dateComponents([.year, .month, .day], from: now)
+        let t = (reminder.times ?? []).filter { !$0.isEmpty }
+        if !t.isEmpty {
+            var nextDate: Date? = nil
+            for timeStr in t {
+                let p = timeStr.split(separator: ":").compactMap { Int($0) }
+                guard p.count >= 2 else { continue }
+                var c = todayUTC; c.hour = p[0]; c.minute = p[1]; c.second = 0
+                guard let d = cal.date(from: c), d >= now else { continue }
+                if nextDate == nil || d < nextDate! { nextDate = d }
+            }
+            guard let next = nextDate else { return nil }
+            return formatIncoming(next.timeIntervalSince(now))
         }
-        return reminder.formattedTime
+        guard let d = APIReminder.parseDate(reminder.date), d >= now else { return nil }
+        return formatIncoming(d.timeIntervalSince(now))
+    }
+
+    private func formatIncoming(_ interval: TimeInterval) -> String {
+        let mins = Int(interval / 60)
+        if mins < 60 { return "in \(mins) min\(mins == 1 ? "" : "s")" }
+        let hours = mins / 60
+        return "in \(hours) hour\(hours == 1 ? "" : "s")"
     }
 
     var body: some View {
         Button(action: { onTap?() }) {
             HStack(spacing: 16) {
                 // Step 5.4 — Min 56 px icon area
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(isCompleted ? Color(hex: "F2F2F7") : Color(hex: "E8F3FF"))
-                        .frame(width: 56, height: 56)
-                    Text(reminder.imageName ?? "💊")
-                        .font(.system(size: 26))
-                        .opacity(isCompleted ? 0.5 : 1.0)
-                }
+                ReminderImageView(
+                    imageName: reminder.imageName,
+                    size: 56,
+                    opacity: isCompleted ? 0.5 : 1.0,
+                    background: isCompleted ? Color(hex: "F2F2F7") : Color(hex: "E8F3FF"),
+                    cornerRadius: 16
+                )
 
                 VStack(alignment: .leading, spacing: 5) {
                     // Step 5.4 — 17 pt minimum for body text
@@ -222,7 +238,7 @@ struct ElderReminderCard: View {
 
                     HStack(spacing: 4) {
                         Image(systemName: "clock").font(.caption)
-                        Text(displayTime).font(.system(size: 15, design: .rounded))
+                        Text(reminder.timesText).font(.system(size: 15, design: .rounded))
                         if let cat = reminder.category, cat.lowercased() != "none", !cat.isEmpty {
                             Text("·")
                             Text(cat.capitalized).font(.system(size: 15, design: .rounded))
@@ -249,10 +265,13 @@ struct ElderReminderCard: View {
                 if isCompleted {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green).font(.title2)
-                } else if onTap != nil {
-                    // Step 5.4 — Pair chevron with implied label via accessibilityHint
-                    Image(systemName: "chevron.right")
-                        .font(.caption).foregroundColor(Color(.systemGray3))
+                } else if let incoming = incomingText {
+                    Text(incoming)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(Color(hex: "007AFF"))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().stroke(Color(hex: "007AFF"), lineWidth: 1))
                 }
             }
             .padding(.all, 16)

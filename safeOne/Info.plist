@@ -2,6 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CFBundleDisplayName</key>
+    <string>Hear+h</string>
+
     <key>UIBackgroundModes</key>
     <array>
         <string>voip</string>
@@ -11,13 +14,13 @@
 
     <!-- ✅ TAMBAHKAN INI -->
     <key>NSMicrophoneUsageDescription</key>
-    <string>SafeOne membutuhkan mikrofon untuk video call darurat</string>
+    <string>Hear+h membutuhkan mikrofon untuk video call darurat</string>
 
     <key>NSCameraUsageDescription</key>
-    <string>SafeOne membutuhkan kamera untuk video call darurat</string>
+    <string>Hear+h membutuhkan kamera untuk video call darurat</string>
     
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>SafeOne membutuhkan akses galeri untuk foto reminder</string>
+    <string>Hear+h membutuhkan akses galeri untuk foto reminder</string>
 
     <!-- NSAllowsArbitraryLoads intentionally omitted — production uses HTTPS (Vercel).
          For local HTTP testing, add it back temporarily in a Debug-only Info.plist. -->

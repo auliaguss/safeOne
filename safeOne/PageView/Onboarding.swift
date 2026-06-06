@@ -32,8 +32,11 @@ struct Onboarding: View {
 
                 VStack {
                     HStack(spacing: 8) {
-                        Image(systemName: "shield.checkered")
-                        Text("SafeOne+")
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 28, height: 28)
+                        Text("Hear+h")
                             .font(.title2)
                             .fontWeight(.bold)
                     }
@@ -97,7 +100,7 @@ struct Onboarding: View {
 
                     // AREA BAWAH: Loading Pengecekan atau Tampilan Tombol
                     if isCheckingUser {
-                        ProgressView("Mengecek data pengguna...")
+                        ProgressView("Checking user data...")
                             .padding(.bottom, 50)
                     } else {
                         VStack(spacing: 15) {

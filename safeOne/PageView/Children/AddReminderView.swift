@@ -6,6 +6,12 @@
 import SwiftUI
 import PhotosUI
 
+private struct TimeEntry: Identifiable {
+    let id: UUID
+    var date: Date
+    init(date: Date) { self.id = UUID(); self.date = date }
+}
+
 struct AddReminderView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
@@ -23,13 +29,15 @@ struct AddReminderView: View {
     @State private var startDate: Date = Date()
     @State private var endDate: Date = Date()
     @State private var hasEndDate: Bool = false
-    @State private var times: [Date] = [Date()]
+    @State private var times: [TimeEntry] = [TimeEntry(date: Date())]
     @State private var showStartDatePicker = false
     @State private var showEndDatePicker = false
     @State private var earlyReminder: EarlyReminderOption = .none
     @State private var category: ReminderCategory = .none
     @State private var selectedEmoji: String = "💊"
     @State private var isSaving = false
+    @State private var isDeleting = false
+    @State private var showDeleteAlert = false
     @State private var errorMessage: String? = nil
 
     @State private var selectedPhoto: PhotosPickerItem? = nil
@@ -162,143 +170,182 @@ struct AddReminderView: View {
                         }
                     }
 
-                    Divider()
-
-                    TextField("Title", text: $title)
-                        .padding(.horizontal)
-                        .padding(.vertical, 14)
-                    Divider().padding(.leading)
-                    TextField("Notes", text: $notes, axis: .vertical)
-                        .lineLimit(3, reservesSpace: false)
-                        .padding(.horizontal)
-                        .padding(.vertical, 14)
+                    // Title + Notes Card
+                    VStack(spacing: 0) {
+                        TextField("Title", text: $title)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                        Divider().padding(.leading, 16)
+                        TextField("Notes", text: $notes, axis: .vertical)
+                            .lineLimit(3, reservesSpace: false)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                    }
+                    .background(Color(.systemBackground))
+                    .cornerRadius(16)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
 
                     if let error = errorMessage {
                         Text(error)
                             .foregroundColor(.red)
                             .font(.caption)
-                            .padding(.horizontal)
+                            .padding(.horizontal, 16)
                     }
 
-                    Divider().padding(.top, 8)
-
-                    SectionHeader(title: "Date & Time")
-
-                    // Start Date
-                    Button(action: {
-                        showStartDatePicker.toggle()
-                        showEndDatePicker = false
-                    }) {
-                        FormPickerRowDisplay(
-                            label: "Start Date",
-                            value: startDate.formatted(.dateTime.month(.wide).day().year())
-                        )
-                    }
-                    if showStartDatePicker {
-                        DatePicker("", selection: $startDate, displayedComponents: .date)
-                            .datePickerStyle(.graphical)
-                            .padding(.horizontal)
-                    }
-
-                    Divider().padding(.leading)
-
-                    // End Date (optional)
-                    Button(action: {
-                        showEndDatePicker.toggle()
-                        showStartDatePicker = false
-                    }) {
-                        FormPickerRowDisplay(
-                            label: "End Date",
-                            value: hasEndDate
-                                ? endDate.formatted(.dateTime.month(.wide).day().year())
-                                : "None"
-                        )
-                    }
-                    if showEndDatePicker {
-                        DatePicker("", selection: $endDate, in: startDate..., displayedComponents: .date)
-                            .datePickerStyle(.graphical)
-                            .padding(.horizontal)
-                            .onChange(of: endDate) { _, _ in hasEndDate = true }
-                        if hasEndDate {
-                            Button("Remove end date") {
-                                hasEndDate = false
-                                showEndDatePicker = false
-                            }
-                            .foregroundColor(.red)
-                            .font(.subheadline)
-                            .padding(.vertical, 8)
-                        }
-                    }
-
-                    Divider().padding(.top, 8)
-
-                    // Times array
-                    HStack {
-                        Text("Time").foregroundColor(.primary)
-                        Spacer()
-                        Button("Add Time") {
-                            times.append(times.last ?? Date())
-                        }
-                        .foregroundColor(.blue)
+                    // Date & Time
+                    Text("Date & Time")
                         .font(.subheadline)
-                        .fontWeight(.medium)
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 14)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 32)
+                        .padding(.top, 20)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                    ForEach(times.indices, id: \.self) { i in
-                        Divider().padding(.leading)
-                        HStack(spacing: 10) {
-                            Button {
-                                if times.count > 1 { times.remove(at: i) }
-                            } label: {
-                                Image(systemName: "minus.circle.fill")
-                                    .foregroundColor(times.count > 1 ? .red : Color(.systemGray4))
-                                    .font(.title3)
+                    VStack(spacing: 0) {
+                        Button(action: {
+                            showStartDatePicker.toggle()
+                            showEndDatePicker = false
+                        }) {
+                            HStack {
+                                Text("Start Date")
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Text(startDate.formatted(.dateTime.day().month(.wide).year()))
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color(.systemGray5))
+                                    .cornerRadius(20)
                             }
-                            .disabled(times.count == 1)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                        }
+                        if showStartDatePicker {
+                            DatePicker("", selection: $startDate, displayedComponents: .date)
+                                .datePickerStyle(.graphical)
+                                .padding(.horizontal)
+                        }
 
-                            Text(ordinalLabel(i + 1))
+                        Divider().padding(.leading, 16)
+
+                        Button(action: {
+                            showEndDatePicker.toggle()
+                            showStartDatePicker = false
+                        }) {
+                            HStack {
+                                Text("End Date")
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Text(hasEndDate
+                                    ? endDate.formatted(.dateTime.day().month(.wide).year())
+                                    : "None")
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color(.systemGray5))
+                                    .cornerRadius(20)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                        }
+                        if showEndDatePicker {
+                            DatePicker("", selection: $endDate, in: startDate..., displayedComponents: .date)
+                                .datePickerStyle(.graphical)
+                                .padding(.horizontal)
+                                .onChange(of: endDate) { _, _ in hasEndDate = true }
+                            if hasEndDate {
+                                Button("Remove end date") {
+                                    hasEndDate = false
+                                    showEndDatePicker = false
+                                }
                                 .foregroundColor(.red)
-                                .fontWeight(.medium)
+                                .font(.subheadline)
+                                .padding(.vertical, 8)
+                            }
+                        }
+                    }
+                    .background(Color(.systemBackground))
+                    .cornerRadius(16)
+                    .padding(.horizontal, 16)
 
+                    // Time Card
+                    VStack(spacing: 0) {
+                        HStack {
+                            Text("Time").foregroundColor(.primary)
                             Spacer()
-
-                            DatePicker("", selection: $times[i], displayedComponents: .hourAndMinute)
-                                .labelsHidden()
+                            Button("Add Time") {
+                                times.append(TimeEntry(date: times.last?.date ?? Date()))
+                            }
+                            .foregroundColor(.blue)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
                         }
-                        .padding(.horizontal)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+
+                        ForEach($times) { $entry in
+                            Divider().padding(.leading, 16)
+                            HStack(spacing: 10) {
+                                Button {
+                                    if times.count > 1 { times.removeAll { $0.id == entry.id } }
+                                } label: {
+                                    Image(systemName: "minus.circle.fill")
+                                        .foregroundColor(times.count > 1 ? .red : Color(.systemGray4))
+                                        .font(.title3)
+                                }
+                                .disabled(times.count == 1)
+
+                                Text(ordinalLabel((times.firstIndex(where: { $0.id == entry.id }) ?? 0) + 1))
+                                    .foregroundColor(.red)
+                                    .fontWeight(.medium)
+
+                                Spacer()
+
+                                DatePicker("", selection: $entry.date, displayedComponents: .hourAndMinute)
+                                    .labelsHidden()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 6)
+                        }
                     }
+                    .background(Color(.systemBackground))
+                    .cornerRadius(16)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
 
-                    Divider().padding(.top, 8)
-
-                    SectionHeader(title: "Reminder")
-
-                    Divider().padding(.leading)
-
-                    Menu {
-                        ForEach(EarlyReminderOption.allCases, id: \.self) { option in
-                            Button(option.rawValue) { earlyReminder = option }
+                    if isEditing {
+                        Button(role: .destructive) {
+                            showDeleteAlert = true
+                        } label: {
+                            HStack {
+                                Spacer()
+                                if isDeleting {
+                                    ProgressView().tint(.red)
+                                } else {
+                                    Text("Delete Reminder").fontWeight(.medium)
+                                }
+                                Spacer()
+                            }
+                            .padding(.vertical, 14)
                         }
-                    } label: {
-                        FormPickerRowDisplay(label: "Early Reminder", value: earlyReminder.rawValue)
-                    }
-
-                    Divider().padding(.leading)
-
-                    Menu {
-                        ForEach(ReminderCategory.allCases, id: \.self) { option in
-                            Button(option.rawValue) { category = option }
-                        }
-                    } label: {
-                        FormPickerRowDisplay(label: "Category", value: category.rawValue)
+                        .foregroundColor(.red)
+                        .disabled(isDeleting)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
                     }
 
                     Spacer(minLength: 40)
                 }
             }
+            .background(Color(.systemGroupedBackground))
             .navigationBarTitleDisplayMode(.inline)
+            .alert("Delete Reminder", isPresented: $showDeleteAlert) {
+                Button("Delete", role: .destructive) { Task { await deleteReminder() } }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to delete \"\(editingReminder?.title ?? "this reminder")\"?")
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { dismiss() }) {
@@ -336,6 +383,17 @@ struct AddReminderView: View {
 
     // MARK: - Helpers
 
+    private func encodePhoto() -> String {
+        guard let img = selectedImage else { return "🖼️" }
+        let side: CGFloat = 300
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side))
+        let resized = renderer.image { _ in
+            img.draw(in: CGRect(x: 0, y: 0, width: side, height: side))
+        }
+        guard let data = resized.jpegData(compressionQuality: 0.7) else { return "🖼️" }
+        return "data:image/jpeg;base64," + data.base64EncodedString()
+    }
+
     private func ordinalLabel(_ n: Int) -> String {
         let suffix: String
         if (11...13).contains(n % 100) { suffix = "th" }
@@ -365,8 +423,21 @@ struct AddReminderView: View {
         }
         title = r.title
         notes = r.notes ?? ""
-        selectedEmoji = r.imageName ?? "💊"
         selectedElderId = r.elderId ?? initialElderId
+
+        // Decode stored image back to preview
+        if let name = r.imageName, name.hasPrefix("data:"),
+           let comma = name.firstIndex(of: ","),
+           let data = Data(base64Encoded: String(name[name.index(after: comma)...])),
+           let img = UIImage(data: data) {
+            selectedImage = img
+            usePhoto = true
+            selectedEmoji = "💊"
+        } else {
+            selectedEmoji = r.imageName ?? "💊"
+            selectedImage = nil
+            usePhoto = false
+        }
 
         // Start date
         if let d = Self.parseDate(r.date) { startDate = d }
@@ -378,14 +449,15 @@ struct AddReminderView: View {
             hasEndDate = true
         }
 
-        // Times array
+        // Times array — stored as UTC "HH:mm"; parse as UTC so DatePicker shows local time
         let timeFmt = DateFormatter()
+        timeFmt.timeZone = TimeZone(abbreviation: "UTC")
         timeFmt.dateFormat = "HH:mm"
         if let t = r.times, !t.isEmpty {
-            let parsed = t.compactMap { timeFmt.date(from: $0) }
-            times = parsed.isEmpty ? [Date()] : parsed
+            let parsed = t.compactMap { timeFmt.date(from: $0) }.map { TimeEntry(date: $0) }
+            times = parsed.isEmpty ? [TimeEntry(date: Date())] : parsed
         } else if let d = Self.parseDate(r.date) {
-            times = [d]
+            times = [TimeEntry(date: d)]
         }
 
         if let ea = r.earlyReminder {
@@ -419,6 +491,22 @@ struct AddReminderView: View {
         }
     }
 
+    // MARK: - Delete
+    private func deleteReminder() async {
+        guard let token = appState.token, let reminder = editingReminder else { return }
+        isDeleting = true
+        do {
+            try await ReminderRepository.deleteReminder(id: reminder.id, token: token)
+            await MainActor.run {
+                isDeleting = false
+                onSaved?()
+                dismiss()
+            }
+        } catch {
+            await MainActor.run { isDeleting = false }
+        }
+    }
+
     // MARK: - Save (Create or Update)
     private func saveReminder() async {
         guard let token = appState.token else {
@@ -436,15 +524,16 @@ struct AddReminderView: View {
         // Build the start date timestamp using startDate + first time
         let cal = Calendar.current
         var comps = cal.dateComponents([.year, .month, .day], from: startDate)
-        let firstTimeComps = cal.dateComponents([.hour, .minute], from: times.first ?? Date())
+        let firstTimeComps = cal.dateComponents([.hour, .minute], from: times.first?.date ?? Date())
         comps.hour = firstTimeComps.hour
         comps.minute = firstTimeComps.minute
         let finalDate = cal.date(from: comps) ?? startDate
 
-        // Times as ["HH:mm"] strings
+        // Times as UTC "HH:mm" strings so the server-side scheduler can compare directly
         let timeFmt = DateFormatter()
+        timeFmt.timeZone = TimeZone(abbreviation: "UTC")
         timeFmt.dateFormat = "HH:mm"
-        let timesArray = times.map { timeFmt.string(from: $0) }
+        let timesArray = times.map { timeFmt.string(from: $0.date) }
 
         // End date as "yyyy-MM-dd" or NSNull
         let endDateValue: Any
@@ -465,7 +554,7 @@ struct AddReminderView: View {
             "times": timesArray,
             "earlyReminder": earlyReminder.rawValue,
             "category": category.rawValue.lowercased(),
-            "imageName": usePhoto ? "🖼️" : selectedEmoji
+            "imageName": usePhoto ? encodePhoto() : selectedEmoji
         ]
 
         do {

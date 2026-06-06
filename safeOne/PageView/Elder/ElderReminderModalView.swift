@@ -4,6 +4,8 @@
 //
 
 import SwiftUI
+import AVFoundation
+import Combine
 
 struct ElderReminderModalView: View {
     @EnvironmentObject var appState: AppState
@@ -11,11 +13,49 @@ struct ElderReminderModalView: View {
     let reminder: APIReminder
     var onAction: (() -> Void)? = nil
 
+    @StateObject private var speech = SpeechHelper()
     @State private var isDone: Bool = false
     @State private var isActing = false
     @State private var showSuccess = false
     @State private var successScale: CGFloat = 0.5
     @State private var actionError: String? = nil
+
+    private var displayTimes: [String] {
+        let t = (reminder.times ?? []).filter { !$0.isEmpty }
+        if !t.isEmpty { return t }
+        guard let d = APIReminder.parseDate(reminder.date) else { return [] }
+        let f = DateFormatter(); f.timeZone = TimeZone(abbreviation: "UTC"); f.dateFormat = "HH:mm"
+        return [f.string(from: d)]
+    }
+
+    private var activeTimeIndex: Int { nearestTimeIndex(in: displayTimes) }
+
+    private func nearestTimeIndex(in times: [String]) -> Int {
+        let now = Date()
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(abbreviation: "UTC")!
+        let comps = cal.dateComponents([.year, .month, .day], from: now)
+        var futureIdx = 0, futureMin = TimeInterval.infinity
+        var pastIdx = 0, pastMax = -TimeInterval.infinity
+        var hasFuture = false, hasPast = false
+        for (i, t) in times.enumerated() {
+            let p = t.split(separator: ":").compactMap { Int($0) }
+            guard p.count >= 2 else { continue }
+            var c = comps; c.hour = p[0]; c.minute = p[1]; c.second = 0
+            guard let d = cal.date(from: c) else { continue }
+            let diff = d.timeIntervalSince(now)
+            if diff >= 0 { if diff < futureMin { futureMin = diff; futureIdx = i; hasFuture = true } }
+            else { if diff > pastMax { pastMax = diff; pastIdx = i; hasPast = true } }
+        }
+        return hasFuture ? futureIdx : (hasPast ? pastIdx : 0)
+    }
+
+    private func utcToLocal(_ s: String) -> String {
+        let f = DateFormatter(); f.timeZone = TimeZone(abbreviation: "UTC"); f.dateFormat = "HH:mm"
+        guard let d = f.date(from: s) else { return s }
+        let lf = DateFormatter(); lf.dateFormat = "HH:mm"
+        return lf.string(from: d)
+    }
 
     var body: some View {
         ZStack {
@@ -26,7 +66,11 @@ struct ElderReminderModalView: View {
                 normalContent
             }
         }
-        .onAppear { isDone = reminder.isCompleted }
+        .onAppear {
+            isDone = reminder.isCompleted
+            speech.speak(reminder.title)
+        }
+        .onDisappear { speech.stop() }
     }
 
     // MARK: - Success state
@@ -54,104 +98,133 @@ struct ElderReminderModalView: View {
     // MARK: - Normal content
 
     private var normalContent: some View {
-        VStack(spacing: 0) {
-            // Close button
-            HStack {
+        NavigationStack {
+            VStack(spacing: 0) {
                 Spacer()
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
+
+                // Image / Emoji circle
+                ReminderImageView(
+                    imageName: reminder.imageName,
+                    size: 160,
+                    isCircle: true,
+                    background: Color(hex: "F2F2F7")
+                )
+                .padding(.bottom, 20)
+
+                // Info
+                VStack(spacing: 8) {
+                    Text(reminder.title)
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(.black)
-                        .font(.title3)
-                        .padding(12)
-                        .background(Color(hex: "F2F2F7"))
-                        .clipShape(Circle())
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
-
-            Spacer()
-
-            // Emoji circle
-            ZStack {
-                Circle()
-                    .fill(Color(hex: "F2F2F7"))
-                    .frame(width: 160, height: 160)
-                Text(reminder.imageName ?? "💊")
-                    .font(.system(size: 72))
-            }
-            .padding(.bottom, 20)
-
-            // Info
-            VStack(spacing: 8) {
-                Text(reminder.title)
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundColor(.black)
-                    .multilineTextAlignment(.center)
-
-                if let notes = reminder.notes, !notes.isEmpty {
-                    Text(notes)
-                        .font(.system(size: 20, weight: .medium, design: .rounded))
-                        .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
+
+                    if let notes = reminder.notes, !notes.isEmpty {
+                        Text(notes)
+                            .font(.system(size: 20, weight: .medium, design: .rounded))
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    if let cat = reminder.category, cat.lowercased() != "none", !cat.isEmpty {
+                        Text(cat.capitalized)
+                            .font(.system(size: 16, design: .rounded))
+                            .foregroundColor(.gray)
+                    }
+                }
+                .padding(.horizontal, 24)
+
+                Spacer()
+
+                // Times
+                if !displayTimes.isEmpty {
+                    let active = activeTimeIndex
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "clock.fill")
+                                .foregroundColor(Color(hex: "007AFF"))
+                                .font(.system(size: 18))
+                            ForEach(Array(displayTimes.enumerated()), id: \.offset) { i, utcTime in
+                                let isActive = i == active
+                                Text(utcToLocal(utcTime))
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .foregroundColor(isActive ? .white : Color(hex: "007AFF"))
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(isActive ? Color(hex: "007AFF") : Color(hex: "007AFF").opacity(0.12))
+                                    .cornerRadius(18)
+                            }
+                        }
+                        .frame(minWidth: UIScreen.main.bounds.width, alignment: .center)
+                    }
+                    .padding(.bottom, 24)
                 }
 
-                if let cat = reminder.category, cat.lowercased() != "none", !cat.isEmpty {
-                    Text(cat.capitalized)
-                        .font(.system(size: 16, design: .rounded))
-                        .foregroundColor(.gray)
-                }
-            }
-            .padding(.horizontal, 24)
+                // Action buttons
+                VStack(spacing: 12) {
+                    if let err = actionError {
+                        Text(err)
+                            .font(.subheadline)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
 
-            Spacer()
-
-            // Time
-            HStack(spacing: 8) {
-                Image(systemName: "clock.fill")
-                    .foregroundColor(Color(hex: "007AFF"))
-                Text(reminder.formattedTime)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(Color(hex: "007AFF"))
-            }
-            .padding(.bottom, 24)
-
-            // Action buttons
-            VStack(spacing: 12) {
-                if let err = actionError {
-                    Text(err)
-                        .font(.subheadline)
-                        .foregroundColor(.red)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-
-                Button(action: { Task { await snooze() } }) {
-                    Text("Snooze 5 minutes")
-                        .font(.system(.headline, design: .rounded))
+                    Button {
+                        speech.speak(reminder.title)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "speaker.wave.2.fill")
+                            Text("Read Again")
+                        }
+                        .font(.system(.subheadline, design: .rounded))
                         .foregroundColor(Color(hex: "007AFF"))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, 14)
                         .background(Color.white)
                         .cornerRadius(14)
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(hex: "007AFF"), lineWidth: 1))
-                }
-                .disabled(isActing || isDone || reminder.isCompleted)
+                    }
 
-                Button(action: { Task { await markDone() } }) {
-                    Text(isDone || reminder.isCompleted ? "Already Done ✓" : "Mark as Done")
-                        .font(.system(.headline, design: .rounded))
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(isDone || reminder.isCompleted ? Color.green : Color(hex: "007AFF"))
-                        .cornerRadius(14)
+                    Button(action: { Task { await snooze() } }) {
+                        Text("Snooze 5 minutes")
+                            .font(.system(.headline, design: .rounded))
+                            .foregroundColor(Color(hex: "007AFF"))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.white)
+                            .cornerRadius(14)
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(hex: "007AFF"), lineWidth: 1))
+                    }
+                    .disabled(isActing || isDone || reminder.isCompleted)
+
+                    Button(action: { Task { await markDone() } }) {
+                        Text(isDone || reminder.isCompleted ? "Already Done ✓" : "Mark as Done")
+                            .font(.system(.headline, design: .rounded))
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(isDone || reminder.isCompleted ? Color.green : Color(hex: "007AFF"))
+                            .cornerRadius(14)
+                    }
+                    .disabled(isActing || isDone || reminder.isCompleted)
                 }
-                .disabled(isActing || isDone || reminder.isCompleted)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 20)
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 20)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.black)
+                            .font(.body)
+                            .padding(8)
+                            .background(Color(hex: "F2F2F7"))
+                            .clipShape(Circle())
+                    }
+                }
+            }
         }
     }
 
@@ -161,7 +234,7 @@ struct ElderReminderModalView: View {
         guard !isActing else { return }
         isActing = true
         actionError = nil
-        // Step 5.2 — Optimistic: show success immediately, rollback on failure
+        speech.stop()
         await MainActor.run {
             successScale = 0.5
             showSuccess = true
@@ -186,6 +259,7 @@ struct ElderReminderModalView: View {
     private func snooze() async {
         guard !isActing else { return }
         isActing = true
+        speech.stop()
         try? await ReminderRepository.snoozeReminder(id: reminder.id, token: appState.authToken)
         await MainActor.run {
             isActing = false

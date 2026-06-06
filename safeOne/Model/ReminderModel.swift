@@ -69,11 +69,20 @@ struct APIReminder: Codable, Identifiable {
 
     // MARK: - Computed
 
-    /// Times to display (falls back to the time embedded in `date`)
+    /// Times to display in local timezone. Stored as UTC "HH:mm"; converted to local for display.
     var timesText: String {
         let t = (times ?? []).filter { !$0.isEmpty }
         if !t.isEmpty {
-            return t.map { $0.replacingOccurrences(of: ":", with: ".") }.joined(separator: " | ")
+            let utcFmt = DateFormatter()
+            utcFmt.timeZone = TimeZone(abbreviation: "UTC")
+            utcFmt.dateFormat = "HH:mm"
+            let localFmt = DateFormatter()
+            localFmt.dateFormat = "HH.mm"
+            let labels = t.compactMap { str -> String? in
+                guard let d = utcFmt.date(from: str) else { return nil }
+                return localFmt.string(from: d)
+            }
+            if !labels.isEmpty { return labels.joined(separator: " | ") }
         }
         guard let d = Self.parseDate(date) else { return "" }
         let fmt = DateFormatter()

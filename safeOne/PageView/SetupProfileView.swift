@@ -142,7 +142,8 @@ struct SetupProfileView: View {
             }
             .navigationBarHidden(true)
             .navigationDestination(isPresented: $navigateToElder) {
-                ElderContentView(appState: _appState)
+                HealthInfoView(mode: .onboarding)
+                    .environmentObject(appState)
             }
             .navigationDestination(isPresented: $navigateToChild) {
                 ContentView(appState: _appState)

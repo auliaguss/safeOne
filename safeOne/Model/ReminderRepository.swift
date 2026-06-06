@@ -17,20 +17,27 @@ struct ReminderRepository {
         return try JSONDecoder().decode([ElderItem].self, from: data)
     }
 
-    static func fetchReminders(elderId: String? = nil, date: Date = Date(), token: String) async throws -> [APIReminder] {
+    static func fetchReminders(elderId: String? = nil, date: Date? = nil, token: String) async throws -> [APIReminder] {
         var comps = URLComponents(string: "\(base)/reminders")!
-        // "yyyy-MM-dd" in local timezone avoids UTC-shift bugs.
-        // JS `new Date("2026-06-05")` treats date-only strings as UTC midnight,
-        // which matches the backend's date-window query.
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-        var items: [URLQueryItem] = [URLQueryItem(name: "date", value: fmt.string(from: date))]
+        var items: [URLQueryItem] = []
+        if let d = date {
+            let fmt = DateFormatter()
+            fmt.dateFormat = "yyyy-MM-dd"
+            items.append(URLQueryItem(name: "date", value: fmt.string(from: d)))
+        }
         if let id = elderId { items.append(URLQueryItem(name: "elderId", value: id)) }
-        comps.queryItems = items
+        comps.queryItems = items.isEmpty ? nil : items
         let req = try makeRequest(comps.url!.absoluteString, token: token)
         let (data, res) = try await URLSession.shared.data(for: req)
         try checkStatus(res, data: data)
         return try JSONDecoder().decode([APIReminder].self, from: data)
+    }
+
+    static func fetchReminder(id: String, token: String) async throws -> APIReminder {
+        let req = try makeRequest("\(base)/reminders/\(id)", token: token)
+        let (data, res) = try await URLSession.shared.data(for: req)
+        try checkStatus(res, data: data)
+        return try JSONDecoder().decode(APIReminder.self, from: data)
     }
 
     // MARK: - CRUD

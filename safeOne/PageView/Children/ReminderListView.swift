@@ -97,41 +97,28 @@ struct ReminderListView: View {
                     Spacer()
                     ProgressView()
                     Spacer()
+                } else if reminders.isEmpty {
+                    Spacer()
+                    VStack(spacing: 12) {
+                        Image(systemName: "list.bullet.clipboard")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+                        Text("No reminders yet")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    Spacer()
                 } else {
                     ScrollView {
                         VStack(spacing: 0) {
-                            ForEach(activeReminders) { reminder in
+                            ForEach(reminders) { reminder in
                                 Button { activeSheet = .edit(reminder) } label: {
-                                    ReminderListRow(reminder: reminder)
+                                    ReminderListRow(reminder: reminder, isPast: reminder.isPast)
                                 }
                                 .buttonStyle(PlainButtonStyle())
                                 Divider()
                                     .padding(.leading, 72)
-                            }
-
-                            // Past Reminders toggle
-                            Button(action: { showPastReminders.toggle() }) {
-                                HStack(spacing: 4) {
-                                    Text("See Past Reminders")
-                                        .font(.subheadline)
-                                        .foregroundColor(.orange)
-                                    Image(systemName: showPastReminders ? "chevron.up" : "chevron.down")
-                                        .font(.caption)
-                                        .foregroundColor(.orange)
-                                }
-                                .padding(.horizontal)
-                                .padding(.vertical, 14)
-                            }
-
-                            if showPastReminders {
-                                ForEach(pastReminders) { reminder in
-                                    Button { activeSheet = .edit(reminder) } label: {
-                                        ReminderListRow(reminder: reminder, isPast: true)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                    Divider()
-                                        .padding(.leading, 72)
-                                }
                             }
                         }
                     }
@@ -187,10 +174,13 @@ struct ReminderListView: View {
 
     private func fetchReminders() async {
         guard let token = appState.token, let elderId = selectedElderId else { return }
+        await MainActor.run { isLoading = true }
         do {
             let decoded = try await ReminderRepository.fetchReminders(elderId: elderId, token: token)
-            await MainActor.run { reminders = decoded }
-        } catch {}
+            await MainActor.run { reminders = decoded; isLoading = false }
+        } catch {
+            await MainActor.run { isLoading = false }
+        }
     }
 }
 
@@ -202,14 +192,13 @@ struct ReminderListRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isPast ? Color(.systemGray5) : Color(.systemGray6))
-                    .frame(width: 48, height: 48)
-                Text(reminder.imageName ?? "💊")
-                    .font(.title3)
-                    .opacity(isPast ? 0.5 : 1.0)
-            }
+            ReminderImageView(
+                imageName: reminder.imageName,
+                size: 48,
+                opacity: isPast ? 0.5 : 1.0,
+                background: isPast ? Color(.systemGray5) : Color(.systemGray6),
+                cornerRadius: 12
+            )
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(reminder.title)

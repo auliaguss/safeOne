@@ -102,23 +102,25 @@ struct ElderProfileView: View {
                 } header: {
                     Text("Connect Caregiver")
                 } footer: {
-                    Text("Generate a 6-digit code for your caregiver to enter in their app. Code expires in 5 minutes.")
+                    Text("Generate a 6-digit code for your caregiver to enter in their app. Code expires in 30 seconds.")
                 }
 
                 // Account
                 Section("Account") {
                     NavigationLink("Family") {
-                        Text("Family").navigationTitle("Family")
+                        FamilyListView()
+                            .environmentObject(appState)
+                    }
+                    NavigationLink("Health Information") {
+                        HealthInfoView(mode: .edit)
+                            .environmentObject(appState)
                     }
                 }
 
                 // General
                 Section("General") {
-                    NavigationLink("Emergency Services") {
-                        Text("Emergency Services").navigationTitle("Emergency Services")
-                    }
                     NavigationLink("Data & Privacy") {
-                        Text("Data & Privacy").navigationTitle("Data & Privacy")
+                        DataPrivacyView()
                     }
                 }
 
@@ -323,6 +325,70 @@ struct ElderEditProfileView: View {
                 errorMessage = "Network error. Try again."
                 isSaving = false
             }
+        }
+    }
+}
+
+// MARK: - Family List View
+struct FamilyListView: View {
+    @EnvironmentObject var appState: AppState
+    @State private var caregivers: [BackendElder] = []
+    @State private var isLoading = false
+
+    var body: some View {
+        List {
+            if isLoading {
+                HStack { Spacer(); ProgressView(); Spacer() }
+            } else if caregivers.isEmpty {
+                Text("No caregivers connected yet")
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 8)
+            } else {
+                ForEach(caregivers) { caregiver in
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.blue.opacity(0.15))
+                                .frame(width: 44, height: 44)
+                            if let avatar = caregiver.avatar, !avatar.isEmpty {
+                                Text(avatar).font(.title3)
+                            } else {
+                                Text(String(caregiver.name.prefix(1)))
+                                    .font(.headline)
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(caregiver.name).font(.body).fontWeight(.medium)
+                            Text("Caregiver").font(.caption).foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .navigationTitle("Family")
+        .task { await fetchCaregivers() }
+    }
+
+    private func fetchCaregivers() async {
+        guard let token = appState.token,
+              let url = URL(string: "\(AppConfig.baseURL)/users/me/caregivers")
+        else { return }
+
+        isLoading = true
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        if let (data, _) = try? await URLSession.shared.data(for: request),
+           let decoded = try? JSONDecoder().decode([BackendElder].self, from: data) {
+            await MainActor.run {
+                caregivers = decoded
+                isLoading = false
+            }
+        } else {
+            await MainActor.run { isLoading = false }
         }
     }
 }

@@ -122,9 +122,10 @@ struct DashboardView: View {
             }
             .presentationDetents([.medium])
         }
-        // Drive fetch from selectedDate changes — avoids stale-closure issues with onDismiss
-        .onChange(of: selectedDate) { _, _ in
-            Task { await fetchReminders() }
+        // Fetch only when the sheet closes (Done button or swipe-dismiss),
+        // not on every date tap inside the picker.
+        .onChange(of: showDatePicker) { _, isShowing in
+            if !isShowing { Task { await fetchReminders() } }
         }
         .task {
             await fetchElders()
@@ -151,10 +152,13 @@ struct DashboardView: View {
 
     private func fetchReminders() async {
         guard let token = appState.token, let elderId = selectedElderId else { return }
+        await MainActor.run { isLoading = true }
         do {
             let decoded = try await ReminderRepository.fetchReminders(elderId: elderId, date: selectedDate, token: token)
-            await MainActor.run { reminders = decoded }
-        } catch {}
+            await MainActor.run { reminders = decoded; isLoading = false }
+        } catch {
+            await MainActor.run { isLoading = false }
+        }
     }
 }
 
@@ -163,27 +167,11 @@ struct DashboardView: View {
 struct DashboardReminderRow: View {
     let reminder: APIReminder
 
-    var timeString: String {
-        // Use times array if available; fall back to date field
-        let t = (reminder.times ?? []).filter { !$0.isEmpty }
-        if !t.isEmpty {
-            return t.map { $0.replacingOccurrences(of: ":", with: ".") }.joined(separator: " | ")
-        }
-        guard let d = APIReminder.parseDate(reminder.date) else { return "" }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH.mm"
-        return formatter.string(from: d)
-    }
+    var timeString: String { reminder.timesText }
 
     var body: some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
-                    .frame(width: 48, height: 48)
-                Text(reminder.imageName ?? "💊")
-                    .font(.title3)
-            }
+            ReminderImageView(imageName: reminder.imageName, size: 48, cornerRadius: 12)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(reminder.title)

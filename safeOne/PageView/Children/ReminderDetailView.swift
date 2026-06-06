@@ -37,16 +37,13 @@ struct ReminderDetailView: View {
         ScrollView {
             VStack(spacing: 0) {
 
-                // Emoji
-                VStack(spacing: 8) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.blue.opacity(0.1))
-                            .frame(width: 90, height: 90)
-                        Text(reminder.imageName ?? "💊")
-                            .font(.system(size: 40))
-                    }
-                }
+                // Image / Emoji
+                ReminderImageView(
+                    imageName: reminder.imageName,
+                    size: 90,
+                    isCircle: true,
+                    background: Color.blue.opacity(0.1)
+                )
                 .padding(.top, 20)
                 .padding(.bottom, 16)
 
