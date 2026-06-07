@@ -77,79 +77,89 @@ final class SupabaseRepository {
 
     func loadPairings() async throws -> [PairingRecord] {
         let userID = try currentUserID()
-        let rows: [SupabasePairingRow] = try await client.database
-            .from("pairings")
+        let rows: [ElderOTPCodeRow] = try await client.database
+            .from("elder_otp_codes")
             .select()
-            .or("caregiver_id.eq.\(userID.uuidString),elder_id.eq.\(userID.uuidString)")
+            .or("elder_id.eq.\(userID.uuidString),used_by.eq.\(userID.uuidString)")
             .execute()
             .value
 
-        return rows.map(\.toModel)
+        var pairings: [PairingRecord] = []
+        for row in rows {
+            let caregiver: SupabaseUserRow?
+            if let usedBy = row.usedBy {
+                caregiver = try await loadUser(usedBy)
+            } else {
+                caregiver = nil
+            }
+            let elder: SupabaseUserRow?
+            elder = try await loadUser(row.elderID)
+            pairings.append(row.toPairing(caregiver: caregiver, elder: elder))
+        }
+
+        return pairings
     }
 
     func generatePairingCode() async throws -> PairingRecord {
-        let caregiverID = try currentUserID()
-        let caregiverProfile = try await loadProfile()
+        let elderID = try currentUserID()
+        let elderProfile = try await loadProfile()
         let code = Self.makePairingCode()
-        let row = SupabasePairingRow(
-            pairingCode: code,
-            caregiverID: caregiverID,
-            caregiverName: caregiverProfile.name,
-            elderID: nil,
-            elderName: nil
+        let row = ElderOTPCodeRow(
+            elderID: elderID,
+            code: code,
+            expiresAt: Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
         )
 
-        let rows: [SupabasePairingRow] = try await client.database
-            .from("pairings")
-            .upsert(row, onConflict: "caregiver_id")
+        let rows: [ElderOTPCodeRow] = try await client.database
+            .from("elder_otp_codes")
+            .insert(row)
             .select()
             .execute()
             .value
 
         if let first = rows.first {
-            return first.toModel
+            return first.toPairing(caregiver: nil, elder: SupabaseUserRow(model: elderProfile, authUserID: elderID))
         }
 
-        return row.toModel
+        return row.toPairing(caregiver: nil, elder: SupabaseUserRow(model: elderProfile, authUserID: elderID))
     }
 
     func joinPairing(code: String) async throws -> PairingRecord {
         let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        let elderID = try currentUserID()
-        let elderProfile = try await loadProfile()
-        let pairingRows: [SupabasePairingRow] = try await client.database
-            .from("pairings")
+        let caregiverID = try currentUserID()
+        let caregiverProfile = try await loadProfile()
+        let pairingRows: [ElderOTPCodeRow] = try await client.database
+            .from("elder_otp_codes")
             .select()
-            .eq("pairing_code", value: normalized)
+            .eq("code", value: normalized)
+            .is("used_at", value: nil)
             .limit(1)
             .execute()
             .value
 
-        guard let pairing = pairingRows.first else {
+        guard let codeRow = pairingRows.first else {
             throw SupabaseRepositoryError.missingPairingCode
         }
 
-        let updatedRow = SupabasePairingRow(
-            pairingCode: normalized,
-            caregiverID: pairing.caregiverID,
-            caregiverName: pairing.caregiverName,
-            elderID: elderID,
-            elderName: elderProfile.name
-        )
+        let update = ElderOTPCodeUpdate(usedAt: Date(), usedBy: caregiverID)
 
-        _ = try await client.database
-            .from("pairings")
-            .upsert(updatedRow, onConflict: "pairing_code")
+        let updatedRows: [ElderOTPCodeRow] = try await client.database
+            .from("elder_otp_codes")
+            .update(update)
+            .eq("id", value: codeRow.id.uuidString)
             .select()
             .execute()
+            .value
 
-        let assignment = CaregiverAssignmentRow(childID: pairing.caregiverID, elderID: elderID)
+        let assignment = CaregiverAssignmentRow(childID: caregiverID, elderID: codeRow.elderID)
         _ = try await client.database
             .from("caregiver_assignments")
             .upsert(assignment, onConflict: "child_id,elder_id")
             .execute()
 
-        return updatedRow.toModel
+        let elder = try await loadUser(codeRow.elderID)
+        return (updatedRows.first ?? codeRow)
+            .toPairing(caregiver: SupabaseUserRow(model: caregiverProfile, authUserID: caregiverID), elder: elder)
     }
 
     func createElder(name: String) async throws -> Elder {
@@ -238,6 +248,18 @@ final class SupabaseRepository {
         }
 
         return userID
+    }
+
+    private func loadUser(_ id: UUID) async throws -> SupabaseUserRow? {
+        let rows: [SupabaseUserRow] = try await client.database
+            .from("users")
+            .select()
+            .eq("id", value: id.uuidString)
+            .limit(1)
+            .execute()
+            .value
+
+        return rows.first
     }
 
     private func createCurrentUserPlaceholder(role: UserRole) async throws -> UserProfile {
@@ -390,38 +412,64 @@ private struct CaregiverAssignmentRow: Codable {
     }
 }
 
-private struct SupabasePairingRow: Codable {
-    var id: UUID?
-    var pairingCode: String
-    var caregiverID: UUID
-    var caregiverName: String
-    var elderID: UUID?
-    var elderName: String?
+private struct ElderOTPCodeRow: Codable {
+    var id: UUID
+    var elderID: UUID
+    var code: String
+    var expiresAt: Date
+    var usedAt: Date?
+    var usedBy: UUID?
     var createdAt: Date?
-    var updatedAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id
-        case pairingCode = "pairing_code"
-        case caregiverID = "caregiver_id"
-        case caregiverName = "caregiver_name"
         case elderID = "elder_id"
-        case elderName = "elder_name"
+        case code
+        case expiresAt = "expires_at"
+        case usedAt = "used_at"
+        case usedBy = "used_by"
         case createdAt = "created_at"
-        case updatedAt = "updated_at"
     }
 
-    var toModel: PairingRecord {
+    init(
+        id: UUID = UUID(),
+        elderID: UUID,
+        code: String,
+        expiresAt: Date,
+        usedAt: Date? = nil,
+        usedBy: UUID? = nil,
+        createdAt: Date? = nil
+    ) {
+        self.id = id
+        self.elderID = elderID
+        self.code = code
+        self.expiresAt = expiresAt
+        self.usedAt = usedAt
+        self.usedBy = usedBy
+        self.createdAt = createdAt
+    }
+
+    func toPairing(caregiver: SupabaseUserRow?, elder: SupabaseUserRow?) -> PairingRecord {
         PairingRecord(
-            id: id ?? UUID(),
-            pairingCode: pairingCode,
-            caregiverID: caregiverID,
-            caregiverName: caregiverName,
+            id: id,
+            pairingCode: code,
+            caregiverID: usedBy ?? id,
+            caregiverName: caregiver?.name ?? "SafeOne User",
             elderID: elderID,
-            elderName: elderName,
+            elderName: elder?.name,
             createdAt: createdAt ?? Date(),
-            updatedAt: updatedAt ?? Date()
+            updatedAt: usedAt ?? createdAt ?? Date()
         )
+    }
+}
+
+private struct ElderOTPCodeUpdate: Codable {
+    var usedAt: Date
+    var usedBy: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case usedAt = "used_at"
+        case usedBy = "used_by"
     }
 }
 

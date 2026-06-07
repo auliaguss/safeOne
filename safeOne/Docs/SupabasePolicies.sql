@@ -4,8 +4,10 @@
 alter table public.users enable row level security;
 alter table public.reminders enable row level security;
 alter table public.caregiver_assignments enable row level security;
-
-alter table public.pairings enable row level security;
+alter table public.elder_otp_codes enable row level security;
+alter table public.reminder_completion_logs enable row level security;
+alter table public.emergency_calls enable row level security;
+alter table public.call_notifications enable row level security;
 
 drop policy if exists "users_select_own" on public.users;
 create policy "users_select_own"
@@ -120,24 +122,26 @@ for delete
 to authenticated
 using (child_id = auth.uid());
 
-drop policy if exists "pairings_select_own" on public.pairings;
-create policy "pairings_select_own"
-on public.pairings
+-- Caregivers need read access to an unused OTP row so they can submit the code
+-- and claim it by setting used_by to their auth.uid().
+drop policy if exists "elder_otp_codes_select_accessible" on public.elder_otp_codes;
+create policy "elder_otp_codes_select_accessible"
+on public.elder_otp_codes
 for select
 to authenticated
-using (caregiver_id = auth.uid() or elder_id = auth.uid());
+using (elder_id = auth.uid() or used_by = auth.uid() or used_by is null);
 
-drop policy if exists "pairings_insert_own" on public.pairings;
-create policy "pairings_insert_own"
-on public.pairings
+drop policy if exists "elder_otp_codes_insert_own" on public.elder_otp_codes;
+create policy "elder_otp_codes_insert_own"
+on public.elder_otp_codes
 for insert
 to authenticated
-with check (caregiver_id = auth.uid() or elder_id = auth.uid());
+with check (elder_id = auth.uid());
 
-drop policy if exists "pairings_update_own" on public.pairings;
-create policy "pairings_update_own"
-on public.pairings
+drop policy if exists "elder_otp_codes_update_accessible" on public.elder_otp_codes;
+create policy "elder_otp_codes_update_accessible"
+on public.elder_otp_codes
 for update
 to authenticated
-using (caregiver_id = auth.uid() or elder_id = auth.uid())
-with check (caregiver_id = auth.uid() or elder_id = auth.uid());
+using (elder_id = auth.uid() or used_by is null)
+with check (elder_id = auth.uid() or used_by = auth.uid());

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ElderProfileView: View {
     @EnvironmentObject var appState: AppState
@@ -29,6 +30,9 @@ struct ElderProfileView: View {
                 }
 
                 Section("Account") {
+                    NavigationLink("Pairing Code") {
+                        ElderPairingCodeView()
+                    }
                     NavigationLink("Connected Devices") {
                         ConnectedDevicesView()
                     }
@@ -96,6 +100,58 @@ struct ElderProfileView: View {
     private func savePreferences() {
         Task {
             await appState.updateNotificationPreferences(preferences)
+        }
+    }
+}
+
+struct ElderPairingCodeView: View {
+    @EnvironmentObject var appState: AppState
+    @State private var pairingCode: String?
+
+    var body: some View {
+        VStack(spacing: 20) {
+            if let pairingCode {
+                Text("Share this code with your caregiver.")
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+
+                Text(pairingCode)
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                Button("Copy Code") {
+                    UIPasteboard.general.string = pairingCode
+                }
+                .buttonStyle(.bordered)
+            } else {
+                Text("Generate a pairing code so your caregiver can connect to this account.")
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button {
+                Task {
+                    pairingCode = await appState.generatePairingCode()
+                }
+            } label: {
+                Text(pairingCode == nil ? "Generate Pairing Code" : "Regenerate Code")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+        }
+        .padding()
+        .navigationTitle("Pairing Code")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await appState.loadPairings()
+            pairingCode = appState.pairingCode
         }
     }
 }

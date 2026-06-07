@@ -434,13 +434,13 @@ final class AppState: ObservableObject {
             }
         }
 
-        guard let caregiverID = session?.user.id else { return nil }
+        guard let elderID = session?.user.id else { return nil }
         let record = PairingRecord(
             pairingCode: Self.makePairingCode(),
-            caregiverID: caregiverID,
-            caregiverName: profile?.name ?? session?.user.name ?? "SafeOne User",
-            elderID: nil,
-            elderName: nil
+            caregiverID: UUID(),
+            caregiverName: "Pending Caregiver",
+            elderID: elderID,
+            elderName: profile?.name ?? session?.user.name ?? "SafeOne User"
         )
         upsertPairing(record)
         syncPairingUIState()
@@ -468,8 +468,8 @@ final class AppState: ObservableObject {
         }
 
         var record = pairings[existingIndex]
-        record.elderID = session?.user.id
-        record.elderName = profile?.name ?? session?.user.name
+        record.caregiverID = session?.user.id ?? record.caregiverID
+        record.caregiverName = profile?.name ?? session?.user.name ?? "SafeOne User"
         record.updatedAt = Date()
         pairings[existingIndex] = record
         persistPairings()
@@ -560,11 +560,7 @@ final class AppState: ObservableObject {
         await loadElders()
         await loadReminders(userID: session?.user.role == .children ? selectedElder?.id : session?.user.id)
 
-        if role == .children {
-            pairingCode = pairings.first(where: { $0.caregiverID == session?.user.id })?.pairingCode
-        } else {
-            pairingCode = nil
-        }
+        syncPairingUIState()
     }
 
     private func apply(session newSession: AuthSession) {
@@ -595,7 +591,7 @@ final class AppState: ObservableObject {
 
     private func syncPairingUIState() {
         if session?.user.role == .children {
-            pairingCode = pairings.first(where: { $0.caregiverID == session?.user.id })?.pairingCode
+            pairingCode = nil
             elders = pairings
                 .filter { $0.caregiverID == session?.user.id }
                 .filter { $0.elderID != nil }
@@ -606,6 +602,12 @@ final class AppState: ObservableObject {
                         avatar: nil
                     )
                 }
+        } else if session?.user.role == .elder {
+            pairingCode = pairings
+                .filter { $0.elderID == session?.user.id }
+                .sorted { $0.createdAt > $1.createdAt }
+                .first(where: { $0.caregiverID == $0.id })?
+                .pairingCode
         } else {
             pairingCode = nil
         }

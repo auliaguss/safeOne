@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
@@ -106,32 +105,14 @@ struct ProfileView: View {
 
 struct ElderListView: View {
     @EnvironmentObject var appState: AppState
-    @State private var showCodeShare = false
-    @State private var pairingCode: String?
+    @State private var showCodeEntry = false
+    @State private var pairingCode = ""
     
     var body: some View {
         List {
             Section {
-                if let pairingCode {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Pairing Code")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text(pairingCode)
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .monospacedDigit()
-                        }
-                        Spacer()
-                        Button("Copy") {
-                            UIPasteboard.general.string = pairingCode
-                        }
-                    }
-                } else {
-                    Text("Generate a pairing code to connect an elder account.")
-                        .foregroundColor(.secondary)
-                }
+                Text("Enter the code shown on the elder device to connect their account.")
+                    .foregroundColor(.secondary)
             }
 
             if appState.elders.isEmpty {
@@ -168,50 +149,54 @@ struct ElderListView: View {
         .navigationTitle("Paired Elders")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { showCodeShare = true }) {
+                Button(action: { showCodeEntry = true }) {
                     Image(systemName: "plus")
                 }
             }
         }
-        .sheet(isPresented: $showCodeShare) {
+        .sheet(isPresented: $showCodeEntry) {
             NavigationStack {
                 VStack(spacing: 20) {
-                    if let pairingCode {
-                        Text("Share this code with the elder device.")
-                            .foregroundColor(.secondary)
-                        Text(pairingCode)
-                            .font(.system(size: 40, weight: .bold, design: .rounded))
-                            .monospacedDigit()
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                    } else {
-                        Text("Generate a code to begin pairing.")
-                            .foregroundColor(.secondary)
-                    }
+                    Text("Ask the elder to open Profile and share their pairing code.")
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+
+                    TextField("Pairing code", text: $pairingCode)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .multilineTextAlignment(.center)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
 
                     Button {
                         Task {
-                            pairingCode = await appState.generatePairingCode()
+                            let joined = await appState.joinPairing(code: pairingCode)
+                            if joined {
+                                pairingCode = ""
+                                showCodeEntry = false
+                                await appState.loadElders()
+                            }
                         }
                     } label: {
-                        Text(pairingCode == nil ? "Generate Pairing Code" : "Regenerate Code")
+                        Text("Connect Elder")
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.blue)
                             .foregroundColor(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
+                    .disabled(pairingCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .opacity(pairingCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.55 : 1.0)
                 }
                 .padding()
                 .navigationTitle("Pairing")
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { showCodeShare = false }
+                        Button("Done") { showCodeEntry = false }
                     }
-                }
-                .onAppear {
-                    pairingCode = appState.pairingCode
                 }
             }
         }

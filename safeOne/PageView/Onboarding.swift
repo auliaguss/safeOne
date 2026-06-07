@@ -100,7 +100,7 @@ struct Onboarding: View {
                         roleButton(title: "Caregiver", systemImage: "person.2.fill", role: .children)
                     }
 
-                    if selectedRole == .elder {
+                    if selectedRole == .children {
                         TextField("Enter pairing code", text: $pairingCode)
                             .textInputAutocapitalization(.characters)
                             .autocorrectionDisabled()
@@ -109,12 +109,12 @@ struct Onboarding: View {
                             .background(Color.white.opacity(0.92))
                             .clipShape(RoundedRectangle(cornerRadius: 14))
 
-                        Text("Ask your caregiver for the pairing code shown in their app.")
+                        Text("Ask the elder for the pairing code shown in their app.")
                             .font(.footnote)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
-                    } else if selectedRole == .children {
-                        Text("After sign-in, open Paired Elders in Profile to generate a code and share it with the elder.")
+                    } else if selectedRole == .elder {
+                        Text("After sign-in, open Profile to generate a pairing code and share it with your caregiver.")
                             .font(.footnote)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -142,12 +142,12 @@ struct Onboarding: View {
                                     role: selectedRole,
                                     nonce: nonce
                                 )
-                                if selectedRole == .elder {
+                                if selectedRole == .children {
                                     let joined = await appState.joinPairing(code: pairingCode)
                                     if !joined {
                                         appState.apiMessage = "Could not join pairing with the code you entered."
                                     }
-                                } else if selectedRole == .children, appState.pairingCode == nil {
+                                } else if selectedRole == .elder, appState.pairingCode == nil {
                                     _ = await appState.generatePairingCode()
                                 }
                                 currentNonce = nil
@@ -161,8 +161,8 @@ struct Onboarding: View {
                     .frame(height: 48)
                     .frame(maxWidth: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .disabled(selectedRole == nil || (selectedRole == .elder && pairingCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
-                    .opacity(selectedRole == nil || (selectedRole == .elder && pairingCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ? 0.55 : 1.0)
+                    .disabled(selectedRole == nil || (selectedRole == .children && pairingCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
+                    .opacity(selectedRole == nil || (selectedRole == .children && pairingCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ? 0.55 : 1.0)
 
 #if DEBUG
                     Button {
