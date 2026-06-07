@@ -16,7 +16,7 @@ final class NotificationService {
 
         let content = UNMutableNotificationContent()
         content.title = reminder.title
-        content.body = reminder.notes.isEmpty ? reminder.category.rawValue : reminder.notes
+        content.body = reminder.notes.isEmpty ? reminder.category.displayName : reminder.notes
         content.sound = .default
         content.userInfo = [
             "reminderID": reminder.id.uuidString

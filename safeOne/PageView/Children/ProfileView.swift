@@ -142,7 +142,9 @@ struct ElderListView: View {
                     .padding(.vertical, 4)
                 }
                 .onDelete { indexSet in
-                    appState.deleteElders(at: indexSet)
+                    Task {
+                        await appState.deleteElders(at: indexSet)
+                    }
                 }
             }
         }

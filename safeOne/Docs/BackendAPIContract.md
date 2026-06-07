@@ -4,6 +4,16 @@ Set `BACKEND_BASE_URL` in `Info.plist` or `UserDefaults` to enable backend calls
 
 ## Authentication
 
+The app's native Sign in with Apple flow uses Supabase directly through `auth.signInWithIdToken`.
+Keep these IDs aligned:
+
+- Xcode bundle identifier / Apple App ID: `com.superAulia.safeOne`
+- Apple Developer Team ID: `V7RKC8F8WN`
+- Supabase project URL: `https://qcivbqymwarzhavvkcjo.supabase.co`
+- Supabase Auth > Sign In / Providers > Apple > Client IDs must include `com.superAulia.safeOne`
+
+If Supabase returns `Unacceptable audience in id_token: [com.superAulia.safeOne]`, the Apple provider is enabled but the Client IDs list does not include the native iOS bundle ID above. A web Services ID is only needed for browser OAuth; this iOS app sends Apple's native identity token to Supabase.
+
 - `POST /auth/apple`
   - Body: `{ "identityToken": "...", "authorizationCode": "...", "fullName": "...", "role": "elder|children" }`
   - Response: `AuthSession`

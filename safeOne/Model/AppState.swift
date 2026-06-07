@@ -16,31 +16,14 @@ final class AppState: ObservableObject {
     @Published var emergencyContacts: [EmergencyContact] = []
 
     private let authService = AuthService()
-    private let reminderService = ReminderService()
-    private let profileService = ProfileService()
     private let supabaseRepository = SupabaseRepository.shared
     private let alertCoordinator = ReminderAlertCoordinator()
-    private let localDataStore = LocalDataStore()
     private let notificationService = NotificationService.shared
     private let faceTimeService = FaceTimeService.shared
     private var alertTask: Task<Void, Never>?
 
     init() {
-        if let savedElders = localDataStore.loadElders() {
-            elders = savedElders
-        }
-
-        if let savedReminders = localDataStore.loadReminders() {
-            reminders = savedReminders
-        }
-
-        if let savedPairings = localDataStore.loadPairings() {
-            pairings = savedPairings
-        }
-
-        if let savedContacts = localDataStore.loadEmergencyContacts() {
-            emergencyContacts = savedContacts
-        }
+        Self.clearLegacyLocalData()
 
         startAlertMonitoring()
         Task {
@@ -100,6 +83,27 @@ final class AppState: ObservableObject {
         }
 
         if let restoredSession = authService.restoreSession() {
+            guard restoredSession.accessToken != AuthService.localDevelopmentToken,
+                  restoredSession.refreshToken != nil
+            else {
+                authService.clearSavedSession()
+                Self.clearLegacyLocalData()
+                return
+            }
+
+            do {
+                try await authService.restoreSupabaseSession(restoredSession)
+                elders = []
+                reminders = []
+                pairings = []
+                pairingCode = nil
+                selectedElderIndex = 0
+                Self.clearLegacyLocalData()
+            } catch {
+                apiMessage = "Supabase session restore failed: \(error.localizedDescription). Sign in with Apple again."
+                authService.clearSavedSession()
+                return
+            }
             session = restoredSession
             profile = restoredSession.user
             startAlertMonitoring()
@@ -118,11 +122,6 @@ final class AppState: ObservableObject {
         } catch {
             apiMessage = error.localizedDescription
         }
-    }
-
-    func signInLocally(role: UserRole) async {
-        apply(session: authService.signInLocally(role: role))
-        await syncAppData(for: role)
     }
 
     func logout() async {
@@ -162,21 +161,10 @@ final class AppState: ObservableObject {
                 await rescheduleNotifications(for: backendReminders)
                 return
             } catch {
-                apiMessage = "Supabase reminders are not ready yet. Using local reminder data."
+                apiMessage = "Supabase reminder sync failed: \(error.localizedDescription)"
             }
-        }
-
-        do {
-            let backendReminders = try await reminderService.getReminders(
-                filter: ReminderFilter(date: date, startDate: startDate, endDate: endDate, userID: userID),
-                token: activeToken
-            )
-            merge(reminders: backendReminders)
-            await rescheduleNotifications(for: backendReminders)
-        } catch APIError.backendNotConfigured {
-            apiMessage = "Using local reminder data until backend is configured."
-        } catch {
-            apiMessage = error.localizedDescription
+        } else {
+            apiMessage = "Supabase session is missing. Sign in with Apple again before loading reminders."
         }
     }
 
@@ -201,59 +189,45 @@ final class AppState: ObservableObject {
         return ReminderProgressSummary(completed: completed, total: total)
     }
 
-    func createReminder(_ reminder: Reminder) async {
+    @discardableResult
+    func createReminder(_ reminder: Reminder) async -> Bool {
         if supabaseRepository.isAvailable {
             do {
                 let created = try await supabaseRepository.upsertReminder(reminder)
                 addReminder(created)
                 await notificationService.schedule(reminder: created)
-                return
+                await loadReminders(userID: created.elderID)
+                return true
             } catch {
-                apiMessage = "Supabase reminder save failed. Using local data."
+                apiMessage = "Supabase reminder save failed. Check reminder policies and the caregiver pairing."
+                return false
             }
         }
 
-        do {
-            let created = try await reminderService.addReminder(reminder, token: activeToken)
-            addReminder(created)
-            await notificationService.schedule(reminder: created)
-        } catch APIError.backendNotConfigured {
-            addReminder(reminder)
-            await notificationService.schedule(reminder: reminder)
-        } catch {
-            apiMessage = error.localizedDescription
-            addReminder(reminder)
-            await notificationService.schedule(reminder: reminder)
-        }
+        apiMessage = "Supabase session is missing. Sign in with Apple again before saving reminders."
+        return false
     }
 
-    func saveReminder(_ reminder: Reminder) async {
+    @discardableResult
+    func saveReminder(_ reminder: Reminder) async -> Bool {
         if reminders.contains(where: { $0.id == reminder.id }) {
             if supabaseRepository.isAvailable {
                 do {
                     let updated = try await supabaseRepository.upsertReminder(reminder)
                     updateReminder(updated)
                     await notificationService.schedule(reminder: updated)
-                    return
+                    await loadReminders(userID: updated.elderID)
+                    return true
                 } catch {
-                    apiMessage = "Supabase reminder update failed. Using local data."
+                    apiMessage = "Supabase reminder update failed. Check reminder policies and the caregiver pairing."
+                    return false
                 }
             }
 
-            do {
-                let updated = try await reminderService.editReminder(reminder, token: activeToken)
-                updateReminder(updated)
-                await notificationService.schedule(reminder: updated)
-            } catch APIError.backendNotConfigured {
-                updateReminder(reminder)
-                await notificationService.schedule(reminder: reminder)
-            } catch {
-                apiMessage = error.localizedDescription
-                updateReminder(reminder)
-                await notificationService.schedule(reminder: reminder)
-            }
+            apiMessage = "Supabase session is missing. Sign in with Apple again before updating reminders."
+            return false
         } else {
-            await createReminder(reminder)
+            return await createReminder(reminder)
         }
     }
 
@@ -264,17 +238,10 @@ final class AppState: ObservableObject {
                 removeReminderIDs(ids)
                 return
             } catch {
-                apiMessage = "Supabase reminder delete failed. Using local data."
+                apiMessage = "Supabase reminder delete failed: \(error.localizedDescription)"
             }
-        }
-
-        do {
-            try await reminderService.deleteReminders(ids: ids, token: activeToken)
-            removeReminderIDs(ids)
-        } catch APIError.backendNotConfigured {
-            removeReminderIDs(ids)
-        } catch {
-            apiMessage = error.localizedDescription
+        } else {
+            apiMessage = "Supabase session is missing. Sign in with Apple again before deleting reminders."
         }
     }
 
@@ -285,7 +252,6 @@ final class AppState: ObservableObject {
         updated.completedCount = min(totalCount, max(updated.completedCount + 1, 1))
         updated.isCompleted = updated.completedCount >= totalCount
         reminders[index] = updated
-        persistReminders()
         alertCoordinator.markCompleted(updated.id)
         await saveReminder(updated)
         await notificationService.cancel(reminderID: updated.id)
@@ -297,7 +263,6 @@ final class AppState: ObservableObject {
         updated.date = Calendar.current.date(byAdding: .minute, value: minutes, to: Date()) ?? Date()
         updated.isCompleted = false
         reminders[index] = updated
-        persistReminders()
         alertCoordinator.resetAlertState(for: updated.id)
         await notificationService.schedule(reminder: updated)
         await saveReminder(updated)
@@ -307,28 +272,26 @@ final class AppState: ObservableObject {
         if supabaseRepository.isAvailable {
             do {
                 let backendProfile = try await supabaseRepository.loadProfile(roleFallback: session?.user.role ?? .children)
-                let devices = try await supabaseRepository.loadConnectedDevices()
                 profile = backendProfile
-                profile?.connectedDevices = devices
                 session?.user = backendProfile
-                session?.user.connectedDevices = devices
-                await loadElders()
-                await loadPairings()
-                return
             } catch {
-                apiMessage = "Supabase profile sync failed. Using local profile data."
+                apiMessage = "Supabase profile sync failed: \(error.localizedDescription)"
             }
+
+            do {
+                let devices = try await supabaseRepository.loadConnectedDevices(roleFallback: session?.user.role ?? .children)
+                profile?.connectedDevices = devices
+                session?.user.connectedDevices = devices
+            } catch {
+                apiMessage = "Supabase device sync failed: \(error.localizedDescription)"
+            }
+
+            await loadPairings()
+            await loadElders()
+            return
         }
 
-        do {
-            let backendProfile = try await profileService.getProfile(token: activeToken)
-            profile = backendProfile
-            session?.user = backendProfile
-        } catch APIError.backendNotConfigured {
-            profile = session?.user
-        } catch {
-            apiMessage = error.localizedDescription
-        }
+        apiMessage = "Supabase session is missing. Sign in with Apple again before loading profile."
     }
 
     func updateNotificationPreferences(_ preferences: NotificationPreferences) async {
@@ -342,44 +305,28 @@ final class AppState: ObservableObject {
                 session?.user = updated
                 return
             } catch {
-                apiMessage = "Supabase profile update failed. Using local profile data."
+                apiMessage = "Supabase profile update failed: \(error.localizedDescription)"
             }
-        }
-
-        do {
-            let updated = try await profileService.updateProfile(currentProfile, token: activeToken)
-            profile = updated
-            session?.user = updated
-        } catch APIError.backendNotConfigured {
-            profile = currentProfile
-            session?.user = currentProfile
-        } catch {
-            apiMessage = error.localizedDescription
-            profile = currentProfile
-            session?.user = currentProfile
+        } else {
+            apiMessage = "Supabase session is missing. Sign in with Apple again before updating profile."
         }
     }
 
     func loadConnectedDevices() async -> [ConnectedDevice] {
         if supabaseRepository.isAvailable {
             do {
-                let devices = try await supabaseRepository.loadConnectedDevices()
+                let devices = try await supabaseRepository.loadConnectedDevices(roleFallback: session?.user.role ?? .children)
                 profile?.connectedDevices = devices
                 session?.user.connectedDevices = devices
                 return devices
             } catch {
-                apiMessage = "Supabase device sync failed. Using local device data."
+                apiMessage = "Supabase device sync failed: \(error.localizedDescription)"
             }
+        } else {
+            apiMessage = "Supabase session is missing. Sign in with Apple again before loading devices."
         }
 
-        do {
-            let devices = try await profileService.getConnectedDevices(token: activeToken)
-            profile?.connectedDevices = devices
-            session?.user.connectedDevices = devices
-            return devices
-        } catch {
-            return profile?.connectedDevices ?? session?.user.connectedDevices ?? []
-        }
+        return profile?.connectedDevices ?? session?.user.connectedDevices ?? []
     }
 
     func loadElders() async {
@@ -387,38 +334,30 @@ final class AppState: ObservableObject {
             do {
                 let backendElders = try await supabaseRepository.loadElders()
                 elders = backendElders
-                persistElders()
                 return
             } catch {
-                apiMessage = "Supabase elder sync failed. Using local elder data."
+                apiMessage = "Supabase elder sync failed: \(error.localizedDescription)"
             }
+        } else {
+            apiMessage = "Supabase session is missing. Sign in with Apple again before loading paired elders."
         }
-
-        guard session?.user.role == .children else {
-            elders = []
-            persistElders()
-            return
-        }
-
-        syncEldersFromPairings()
+        elders = []
     }
 
     func loadPairings() async {
         if supabaseRepository.isAvailable {
             do {
                 pairings = try await supabaseRepository.loadPairings()
-                persistPairings()
                 syncPairingUIState()
                 return
             } catch {
-                apiMessage = "Supabase pairing sync failed. Using local pairing data."
+                apiMessage = "Supabase pairing sync failed: \(error.localizedDescription)"
             }
+        } else {
+            apiMessage = "Supabase session is missing. Sign in with Apple again before loading pairings."
         }
 
-        if let saved = localDataStore.loadPairings() {
-            pairings = saved
-        }
-
+        pairings = []
         syncPairingUIState()
     }
 
@@ -431,20 +370,12 @@ final class AppState: ObservableObject {
                 return record.pairingCode
             } catch {
                 apiMessage = error.localizedDescription
+                return nil
             }
         }
 
-        guard let elderID = session?.user.id else { return nil }
-        let record = PairingRecord(
-            pairingCode: Self.makePairingCode(),
-            caregiverID: UUID(),
-            caregiverName: "Pending Caregiver",
-            elderID: elderID,
-            elderName: profile?.name ?? session?.user.name ?? "SafeOne User"
-        )
-        upsertPairing(record)
-        syncPairingUIState()
-        return record.pairingCode
+        apiMessage = "Supabase session is missing. Sign in with Apple again before generating a pairing code."
+        return nil
     }
 
     func joinPairing(code: String) async -> Bool {
@@ -456,52 +387,38 @@ final class AppState: ObservableObject {
                 let record = try await supabaseRepository.joinPairing(code: normalized)
                 upsertPairing(record)
                 syncPairingUIState()
+                await loadElders()
+                await loadReminders(userID: selectedElder?.id ?? record.elderID)
                 return true
             } catch {
                 apiMessage = error.localizedDescription
+                return false
             }
         }
 
-        guard let existingIndex = pairings.firstIndex(where: { $0.pairingCode == normalized }) else {
-            apiMessage = "Pairing code was not found."
-            return false
-        }
-
-        var record = pairings[existingIndex]
-        record.caregiverID = session?.user.id ?? record.caregiverID
-        record.caregiverName = profile?.name ?? session?.user.name ?? "SafeOne User"
-        record.updatedAt = Date()
-        pairings[existingIndex] = record
-        persistPairings()
-        syncPairingUIState()
-        return true
+        apiMessage = "Supabase session is missing. Sign in with Apple again before joining pairing."
+        return false
     }
 
     func loadEmergencyContacts() {
-        if let contacts = localDataStore.loadEmergencyContacts() {
-            emergencyContacts = contacts
-        }
+        emergencyContacts = []
     }
 
     func saveEmergencyContacts(_ contacts: [EmergencyContact]) {
         emergencyContacts = contacts
-        persistEmergencyContacts()
     }
 
     func addEmergencyContact(_ contact: EmergencyContact) {
         emergencyContacts.append(contact)
-        persistEmergencyContacts()
     }
 
     func updateEmergencyContact(_ contact: EmergencyContact) {
         guard let index = emergencyContacts.firstIndex(where: { $0.id == contact.id }) else { return }
         emergencyContacts[index] = contact
-        persistEmergencyContacts()
     }
 
     func deleteEmergencyContacts(ids: [UUID]) {
         emergencyContacts.removeAll { ids.contains($0.id) }
-        persistEmergencyContacts()
     }
 
     func openFaceTime(using contact: FaceTimeContact? = nil) {
@@ -534,9 +451,21 @@ final class AppState: ObservableObject {
         }
     }
 
-    func deleteElders(at offsets: IndexSet) {
+    func deleteElders(at offsets: IndexSet) async {
         let removedIDs = offsets.compactMap { index in
             elders.indices.contains(index) ? elders[index].id : nil
+        }
+
+        if supabaseRepository.isAvailable {
+            do {
+                try await supabaseRepository.removeElderAssignments(ids: removedIDs)
+            } catch {
+                apiMessage = "Supabase elder removal failed: \(error.localizedDescription)"
+                return
+            }
+        } else {
+            apiMessage = "Supabase session is missing. Sign in with Apple again before removing paired elders."
+            return
         }
 
         for index in offsets.sorted(by: >) {
@@ -548,9 +477,6 @@ final class AppState: ObservableObject {
         if selectedElderIndex >= elders.count {
             selectedElderIndex = max(0, elders.count - 1)
         }
-
-        persistElders()
-        persistReminders()
     }
 
     private func syncAppData(for role: UserRole?) async {
@@ -564,6 +490,13 @@ final class AppState: ObservableObject {
     }
 
     private func apply(session newSession: AuthSession) {
+        elders = []
+        reminders = []
+        pairings = []
+        pairingCode = nil
+        selectedElderIndex = 0
+        Self.clearLegacyLocalData()
+
         session = newSession
         profile = newSession.user
         startAlertMonitoring()
@@ -577,7 +510,6 @@ final class AppState: ObservableObject {
                 reminders.append(reminder)
             }
         }
-        persistReminders()
     }
 
     private func upsertPairing(_ record: PairingRecord) {
@@ -586,7 +518,6 @@ final class AppState: ObservableObject {
         } else {
             pairings.append(record)
         }
-        persistPairings()
     }
 
     private func syncPairingUIState() {
@@ -611,15 +542,11 @@ final class AppState: ObservableObject {
         } else {
             pairingCode = nil
         }
-        if session?.user.role == .children {
-            persistElders()
-        }
     }
 
     private func syncEldersFromPairings() {
         guard session?.user.role == .children else {
             elders = []
-            persistElders()
             return
         }
 
@@ -633,7 +560,6 @@ final class AppState: ObservableObject {
                     avatar: nil
                 )
             }
-        persistElders()
     }
 
     private func startAlertMonitoring() {
@@ -651,18 +577,15 @@ final class AppState: ObservableObject {
 
     private func addReminder(_ reminder: Reminder) {
         reminders.append(reminder)
-        persistReminders()
     }
 
     private func updateReminder(_ reminder: Reminder) {
         guard let index = reminders.firstIndex(where: { $0.id == reminder.id }) else { return }
         reminders[index] = reminder
-        persistReminders()
     }
 
     private func removeReminderIDs(_ ids: [UUID]) {
         reminders.removeAll { ids.contains($0.id) }
-        persistReminders()
         Task {
             for id in ids {
                 await notificationService.cancel(reminderID: id)
@@ -673,34 +596,17 @@ final class AppState: ObservableObject {
         }
     }
 
-    private func persistReminders() {
-        localDataStore.saveReminders(reminders)
-    }
-
-    private func persistElders() {
-        localDataStore.saveElders(elders)
-    }
-
-    private func persistPairings() {
-        localDataStore.savePairings(pairings)
-    }
-
-    private func persistEmergencyContacts() {
-        localDataStore.saveEmergencyContacts(emergencyContacts)
-    }
-
     private func rescheduleNotifications(for reminders: [Reminder]) async {
         for reminder in reminders {
             await notificationService.schedule(reminder: reminder)
         }
     }
 
-    private static func makePairingCode(length: Int = 6) -> String {
-        let alphabet = Array("ABCDEFGHJKLMNPQRSTUVWXYZ23456789")
-        var code = ""
-        while code.count < length {
-            code.append(alphabet.randomElement() ?? "A")
-        }
-        return code
+    private static func clearLegacyLocalData() {
+        UserDefaults.standard.removeObject(forKey: "localReminders")
+        UserDefaults.standard.removeObject(forKey: "localElders")
+        UserDefaults.standard.removeObject(forKey: "localPairings")
+        UserDefaults.standard.removeObject(forKey: "localEmergencyContacts")
     }
+
 }

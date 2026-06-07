@@ -120,6 +120,13 @@ struct Onboarding: View {
                             .multilineTextAlignment(.center)
                     }
 
+                    if let apiMessage = appState.apiMessage {
+                        Text(apiMessage)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                    }
+
                     SignInWithAppleButton(.signIn) { request in
                         request.requestedScopes = [.fullName, .email]
                         let nonce = Self.randomNonceString()
@@ -137,6 +144,7 @@ struct Onboarding: View {
                             }
 
                             Task {
+                                appState.apiMessage = nil
                                 await appState.signInWithApple(
                                     credential: credential,
                                     role: selectedRole,
@@ -144,7 +152,7 @@ struct Onboarding: View {
                                 )
                                 if selectedRole == .children {
                                     let joined = await appState.joinPairing(code: pairingCode)
-                                    if !joined {
+                                    if !joined && appState.apiMessage == nil {
                                         appState.apiMessage = "Could not join pairing with the code you entered."
                                     }
                                 } else if selectedRole == .elder, appState.pairingCode == nil {
@@ -164,26 +172,6 @@ struct Onboarding: View {
                     .disabled(selectedRole == nil || (selectedRole == .children && pairingCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
                     .opacity(selectedRole == nil || (selectedRole == .children && pairingCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ? 0.55 : 1.0)
 
-#if DEBUG
-                    Button {
-                        guard let selectedRole else { return }
-                        Task {
-                            await appState.signInLocally(role: selectedRole)
-                        }
-                    } label: {
-                        Text("Continue without Apple")
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 48)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.blue)
-                    .disabled(selectedRole == nil)
-
-                    Text("If Apple sign-in fails, use the local demo login to keep testing.")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-#endif
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 28)

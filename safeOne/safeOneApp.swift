@@ -2,7 +2,29 @@ import SwiftUI
 
 enum UserRole: String, Codable, CaseIterable {
     case elder
-    case children
+    case children = "child"
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self)
+
+        switch value {
+        case "elder":
+            self = .elder
+        case "child", "children":
+            self = .children
+        default:
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Unsupported user role: \(value)"
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 
     var displayName: String {
         switch self {

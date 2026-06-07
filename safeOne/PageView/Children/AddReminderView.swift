@@ -94,6 +94,14 @@ struct AddReminderView: View {
                         Text("Tap image to add photo")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
+
+                        if let apiMessage = appState.apiMessage {
+                            Text(apiMessage)
+                                .font(.footnote)
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
                     }
                     .padding(.top, 20)
                     .padding(.bottom, 16)
@@ -147,30 +155,30 @@ struct AddReminderView: View {
 
                     Menu {
                         ForEach(RepeatOption.allCases, id: \.self) { option in
-                            Button(option.rawValue) { repeatOption = option }
+                            Button(option.displayName) { repeatOption = option }
                         }
                     } label: {
-                        FormPickerRowDisplay(label: "Repeat", value: repeatOption.rawValue)
+                        FormPickerRowDisplay(label: "Repeat", value: repeatOption.displayName)
                     }
 
                     Divider().padding(.leading)
 
                     Menu {
                         ForEach(EarlyReminderOption.allCases, id: \.self) { option in
-                            Button(option.rawValue) { earlyReminder = option }
+                            Button(option.displayName) { earlyReminder = option }
                         }
                     } label: {
-                        FormPickerRowDisplay(label: "Early Reminder", value: earlyReminder.rawValue)
+                        FormPickerRowDisplay(label: "Early Reminder", value: earlyReminder.displayName)
                     }
 
                     Divider().padding(.leading)
 
                     Menu {
                         ForEach(ReminderCategory.allCases, id: \.self) { option in
-                            Button(option.rawValue) { category = option }
+                            Button(option.displayName) { category = option }
                         }
                     } label: {
-                        FormPickerRowDisplay(label: "Category", value: category.rawValue)
+                        FormPickerRowDisplay(label: "Category", value: category.displayName)
                     }
 
                     Spacer(minLength: 40)
@@ -274,9 +282,10 @@ struct AddReminderView: View {
             imageName: selectedEmoji
         )
 
-        await appState.saveReminder(newReminder)
-
-        dismiss()
+        let didSave = await appState.saveReminder(newReminder)
+        if didSave {
+            dismiss()
+        }
     }
 }
 

@@ -1,7 +1,6 @@
 import AuthenticationServices
 import Foundation
 import Supabase
-import UIKit
 
 struct AppleLoginRequest: Codable {
     var identityToken: String
@@ -12,13 +11,13 @@ struct AppleLoginRequest: Codable {
 }
 
 final class AuthService {
-    private let apiClient: APIClient
+    static let localDevelopmentToken = "local-development-token"
+
     private let sessionKey = "authSession"
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    init(apiClient: APIClient = APIClient()) {
-        self.apiClient = apiClient
+    init() {
         encoder.dateEncodingStrategy = .iso8601
         decoder.dateDecodingStrategy = .iso8601
     }
@@ -35,20 +34,28 @@ final class AuthService {
             role: role,
             nonce: nonce
         )
-
-        if let nonce {
+        if nonce != nil {
             do {
+                guard !request.identityToken.isEmpty else {
+                    throw AuthServiceError.missingAppleIdentityToken
+                }
+
                 let supabaseSession = try await SupabaseManager.shared.client.auth.signInWithIdToken(
                     credentials: OpenIDConnectCredentials(
                         provider: .apple,
-                        idToken: request.identityToken
+                        idToken: request.identityToken,
+                        nonce: nonce
                     )
                 )
 
                 let userID = UUID(uuidString: String(describing: supabaseSession.user.id)) ?? UUID()
                 let profile = UserProfile(
                     id: userID,
-                    name: request.fullName ?? supabaseSession.user.email ?? "SafeOne User",
+                    name: Self.displayName(
+                        appleName: request.fullName,
+                        email: supabaseSession.user.email,
+                        role: role
+                    ),
                     email: supabaseSession.user.email,
                     role: role,
                     avatar: nil,
@@ -60,39 +67,26 @@ final class AuthService {
                     )
                 )
 
+                let savedProfile = try await SupabaseRepository.shared.upsertProfile(profile)
                 let session = AuthSession(
                     accessToken: supabaseSession.accessToken,
                     refreshToken: supabaseSession.refreshToken,
-                    user: profile
+                    user: savedProfile
                 )
 
                 save(session)
-                _ = try? await SupabaseRepository.shared.upsertProfile(profile)
                 return session
             } catch {
-                // Fall back to the current development flow if Supabase auth is not ready yet.
+                if AuthServiceError.isAppleAudienceMismatch(error) {
+                    throw AuthServiceError.appleAudienceMismatch(
+                        bundleIdentifier: Bundle.main.bundleIdentifier ?? "com.superAulia.safeOne"
+                    )
+                }
+                throw error
             }
         }
 
-        do {
-            let session: AuthSession = try await apiClient.request(
-                "auth/apple",
-                method: "POST",
-                body: request
-            )
-            save(session)
-            return session
-        } catch APIError.backendNotConfigured {
-            let fallback = localSession(role: role, name: request.fullName)
-            save(fallback)
-            return fallback
-        }
-    }
-
-    func signInLocally(role: UserRole) -> AuthSession {
-        let session = localSession(role: role, name: nil)
-        save(session)
-        return session
+        throw AuthServiceError.missingAppleIdentityToken
     }
 
     func logout(token: String?) async {
@@ -100,13 +94,6 @@ final class AuthService {
             try? await SupabaseManager.shared.client.auth.signOut()
         }
 
-        if let token {
-            let _: EmptyResponse? = try? await apiClient.request(
-                "auth/logout",
-                method: "POST",
-                token: token
-            )
-        }
         SecureStore.deleteData(forKey: sessionKey)
     }
 
@@ -117,36 +104,67 @@ final class AuthService {
         return try? decoder.decode(AuthSession.self, from: data)
     }
 
+    func clearSavedSession() {
+        SecureStore.deleteData(forKey: sessionKey)
+    }
+
+    func restoreSupabaseSession(_ session: AuthSession) async throws {
+        guard session.accessToken != Self.localDevelopmentToken,
+              let refreshToken = session.refreshToken,
+              SupabaseManager.shared.client.auth.currentSession == nil
+        else {
+            return
+        }
+
+        _ = try await SupabaseManager.shared.client.auth.setSession(
+            accessToken: session.accessToken,
+            refreshToken: refreshToken
+        )
+    }
+
     private func save(_ session: AuthSession) {
         guard let data = try? encoder.encode(session) else { return }
         SecureStore.saveData(data, forKey: sessionKey)
     }
 
-    private func localSession(role: UserRole, name: String?) -> AuthSession {
-        AuthSession(
-            accessToken: "local-development-token",
-            refreshToken: nil,
-            user: UserProfile(
-                id: UUID(),
-                name: name ?? (role == .elder ? "Sukarni" : "Bowo Prabu"),
-                email: nil,
-                role: role,
-                avatar: nil,
-                connectedDevices: [
-                    ConnectedDevice(
-                        id: UUID(),
-                        name: UIDevice.current.name,
-                        role: role,
-                        isCurrentDevice: true,
-                        lastSeenAt: Date()
-                    )
-                ],
-                notificationPreferences: NotificationPreferences(
-                    sound: .default,
-                    hapticsEnabled: true,
-                    textToSpeechEnabled: true
-                )
-            )
-        )
+    private static func displayName(appleName: String?, email: String?, role: UserRole) -> String {
+        let trimmedAppleName = appleName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedAppleName, !trimmedAppleName.isEmpty {
+            return trimmedAppleName
+        }
+
+        let trimmedEmail = email?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedEmail, !trimmedEmail.isEmpty {
+            return trimmedEmail
+        }
+
+        return defaultName(for: role)
+    }
+
+    private static func defaultName(for role: UserRole) -> String {
+        switch role {
+        case .elder:
+            return "Elder"
+        case .children:
+            return "Caregiver"
+        }
+    }
+}
+
+enum AuthServiceError: LocalizedError {
+    case missingAppleIdentityToken
+    case appleAudienceMismatch(bundleIdentifier: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .missingAppleIdentityToken:
+            return "Apple did not return an identity token. Try signing in again."
+        case .appleAudienceMismatch(let bundleIdentifier):
+            return "Supabase Apple auth is missing Client ID \(bundleIdentifier). Add it in Supabase Auth > Sign In / Providers > Apple."
+        }
+    }
+
+    static func isAppleAudienceMismatch(_ error: Error) -> Bool {
+        error.localizedDescription.localizedCaseInsensitiveContains("unacceptable audience")
     }
 }

@@ -58,11 +58,11 @@ struct ElderReminderModalView: View {
                             .font(.system(size: 34, weight: .bold, design: .rounded))
                             .foregroundColor(.black)
                         
-                        Text(reminder.notes.isEmpty ? reminder.category.rawValue : reminder.notes)
+                        Text(reminder.notes.isEmpty ? reminder.category.displayName : reminder.notes)
                             .font(.system(size: 28, weight: .medium, design: .rounded))
                             .foregroundColor(.gray)
                         
-                        Text(reminder.repeatOption.rawValue)
+                        Text(reminder.repeatOption.displayName)
                             .font(.system(size: 20, weight: .regular, design: .rounded))
                             .foregroundColor(.gray)
                     }

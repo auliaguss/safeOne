@@ -1,5 +1,23 @@
 -- SafeOne policies for the existing Supabase schema.
--- Run this after confirming the real table names and foreign keys.
+-- This app stores Supabase auth.uid() in public.users.id and users.apple_user_id.
+-- Caregiver accounts use role = 'child'; elder accounts use role = 'elder'.
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'caregiver_assignments_child_elder_unique'
+      and conrelid = 'public.caregiver_assignments'::regclass
+  ) then
+    alter table public.caregiver_assignments
+      add constraint caregiver_assignments_child_elder_unique unique (child_id, elder_id);
+  end if;
+end $$;
+
+create unique index if not exists elder_otp_codes_active_code_unique
+on public.elder_otp_codes (code)
+where used_at is null;
 
 alter table public.users enable row level security;
 alter table public.reminders enable row level security;
@@ -14,7 +32,16 @@ create policy "users_select_own"
 on public.users
 for select
 to authenticated
-using (apple_user_id = auth.uid()::text or id = auth.uid());
+using (
+  apple_user_id = auth.uid()::text
+  or id = auth.uid()
+  or exists (
+    select 1
+    from public.caregiver_assignments ca
+    where (ca.child_id = auth.uid() and ca.elder_id = users.id)
+      or (ca.elder_id = auth.uid() and ca.child_id = users.id)
+  )
+);
 
 drop policy if exists "users_insert_own" on public.users;
 create policy "users_insert_own"
@@ -54,11 +81,14 @@ for insert
 to authenticated
 with check (
   created_by = auth.uid()
-  or exists (
-    select 1
-    from public.caregiver_assignments ca
-    where ca.child_id = auth.uid()
-      and ca.elder_id = elder_id
+  and (
+    elder_id = auth.uid()
+    or exists (
+      select 1
+      from public.caregiver_assignments ca
+      where ca.child_id = auth.uid()
+        and ca.elder_id = elder_id
+    )
   )
 );
 
@@ -69,6 +99,7 @@ for update
 to authenticated
 using (
   created_by = auth.uid()
+  or elder_id = auth.uid()
   or exists (
     select 1
     from public.caregiver_assignments ca
@@ -78,11 +109,14 @@ using (
 )
 with check (
   created_by = auth.uid()
-  or exists (
-    select 1
-    from public.caregiver_assignments ca
-    where ca.child_id = auth.uid()
-      and ca.elder_id = elder_id
+  and (
+    elder_id = auth.uid()
+    or exists (
+      select 1
+      from public.caregiver_assignments ca
+      where ca.child_id = auth.uid()
+        and ca.elder_id = elder_id
+    )
   )
 );
 
@@ -93,6 +127,7 @@ for delete
 to authenticated
 using (
   created_by = auth.uid()
+  or elder_id = auth.uid()
   or exists (
     select 1
     from public.caregiver_assignments ca

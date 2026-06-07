@@ -157,7 +157,7 @@ private struct ElderReminderRow: View {
                         .font(.body)
                         .fontWeight(.bold)
                         .foregroundColor(.black)
-                    Text(reminder.notes.isEmpty ? reminder.category.rawValue : reminder.notes)
+                    Text(reminder.notes.isEmpty ? reminder.category.displayName : reminder.notes)
                         .font(.caption)
                         .foregroundColor(.gray)
                     Text(timeText)

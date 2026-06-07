@@ -24,7 +24,11 @@ final class SupabaseRepository {
             .value
 
         if let row = rows.first {
-            return row.toModel(connectedDevices: [currentDevice(role: row.role)])
+            let profile = row.toModel(connectedDevices: [currentDevice(role: row.role)])
+            if row.isMissingName {
+                return try await upsertProfile(profile)
+            }
+            return profile
         }
 
         return try await createCurrentUserPlaceholder(role: roleFallback)
@@ -43,8 +47,8 @@ final class SupabaseRepository {
             ?? profile
     }
 
-    func loadConnectedDevices() async throws -> [ConnectedDevice] {
-        let profile = try await loadProfile()
+    func loadConnectedDevices(roleFallback: UserRole = .children) async throws -> [ConnectedDevice] {
+        let profile = try await loadProfile(roleFallback: roleFallback)
         return profile.connectedDevices
     }
 
@@ -132,7 +136,6 @@ final class SupabaseRepository {
             .from("elder_otp_codes")
             .select()
             .eq("code", value: normalized)
-            .is("used_at", value: nil)
             .limit(1)
             .execute()
             .value
@@ -141,51 +144,34 @@ final class SupabaseRepository {
             throw SupabaseRepositoryError.missingPairingCode
         }
 
-        let update = ElderOTPCodeUpdate(usedAt: Date(), usedBy: caregiverID)
+        guard codeRow.elderID != caregiverID else {
+            throw SupabaseRepositoryError.selfPairing
+        }
 
-        let updatedRows: [ElderOTPCodeRow] = try await client.database
-            .from("elder_otp_codes")
-            .update(update)
-            .eq("id", value: codeRow.id.uuidString)
-            .select()
-            .execute()
-            .value
+        if let usedBy = codeRow.usedBy, usedBy != caregiverID {
+            throw SupabaseRepositoryError.pairingCodeAlreadyUsed
+        }
 
-        let assignment = CaregiverAssignmentRow(childID: caregiverID, elderID: codeRow.elderID)
-        _ = try await client.database
-            .from("caregiver_assignments")
-            .upsert(assignment, onConflict: "child_id,elder_id")
-            .execute()
+        try await insertCaregiverAssignmentIfNeeded(childID: caregiverID, elderID: codeRow.elderID)
+
+        let updatedRow: ElderOTPCodeRow
+        if codeRow.usedBy == caregiverID {
+            updatedRow = codeRow
+        } else {
+            let update = ElderOTPCodeUpdate(usedAt: Date(), usedBy: caregiverID)
+            let updatedRows: [ElderOTPCodeRow] = try await client.database
+                .from("elder_otp_codes")
+                .update(update)
+                .eq("id", value: codeRow.id.uuidString)
+                .select()
+                .execute()
+                .value
+            updatedRow = updatedRows.first ?? codeRow
+        }
 
         let elder = try await loadUser(codeRow.elderID)
-        return (updatedRows.first ?? codeRow)
+        return updatedRow
             .toPairing(caregiver: SupabaseUserRow(model: caregiverProfile, authUserID: caregiverID), elder: elder)
-    }
-
-    func createElder(name: String) async throws -> Elder {
-        let caregiverID = try currentUserID()
-        let elder = Elder(name: name)
-
-        let elderRow = SupabaseUserRow(
-            id: elder.id,
-            appleUserID: nil,
-            name: elder.name,
-            role: .elder,
-            avatar: elder.avatar
-        )
-
-        _ = try await client.database
-            .from("users")
-            .insert(elderRow)
-            .execute()
-
-        let assignment = CaregiverAssignmentRow(childID: caregiverID, elderID: elder.id)
-        _ = try await client.database
-            .from("caregiver_assignments")
-            .insert(assignment)
-            .execute()
-
-        return elder
     }
 
     func removeElderAssignments(ids: [UUID]) async throws {
@@ -262,11 +248,30 @@ final class SupabaseRepository {
         return rows.first
     }
 
+    private func insertCaregiverAssignmentIfNeeded(childID: UUID, elderID: UUID) async throws {
+        let existingRows: [CaregiverAssignmentRow] = try await client.database
+            .from("caregiver_assignments")
+            .select()
+            .eq("child_id", value: childID.uuidString)
+            .eq("elder_id", value: elderID.uuidString)
+            .limit(1)
+            .execute()
+            .value
+
+        guard existingRows.isEmpty else { return }
+
+        let assignment = CaregiverAssignmentRow(childID: childID, elderID: elderID)
+        _ = try await client.database
+            .from("caregiver_assignments")
+            .insert(assignment)
+            .execute()
+    }
+
     private func createCurrentUserPlaceholder(role: UserRole) async throws -> UserProfile {
         let userID = try currentUserID()
         let fallback = UserProfile(
             id: userID,
-            name: "SafeOne User",
+            name: Self.defaultName(for: role),
             email: nil,
             role: role,
             avatar: nil,
@@ -302,6 +307,8 @@ final class SupabaseRepository {
 enum SupabaseRepositoryError: LocalizedError {
     case missingSession
     case missingPairingCode
+    case selfPairing
+    case pairingCodeAlreadyUsed
 
     var errorDescription: String? {
         switch self {
@@ -309,6 +316,10 @@ enum SupabaseRepositoryError: LocalizedError {
             return "Supabase session is missing."
         case .missingPairingCode:
             return "Pairing code was not found."
+        case .selfPairing:
+            return "Use a different Apple account for the caregiver. An elder cannot pair with the same account."
+        case .pairingCodeAlreadyUsed:
+            return "This pairing code was already used by another caregiver. Generate a new code on the elder device."
         }
     }
 }
@@ -323,12 +334,21 @@ private extension SupabaseRepository {
         }
         return code
     }
+
+    static func defaultName(for role: UserRole) -> String {
+        switch role {
+        case .elder:
+            return "Elder"
+        case .children:
+            return "Caregiver"
+        }
+    }
 }
 
 private struct SupabaseUserRow: Codable {
     var id: UUID
     var appleUserID: String?
-    var name: String
+    var name: String?
     var role: UserRole
     var avatar: String?
     var createdAt: Date?
@@ -373,7 +393,7 @@ private struct SupabaseUserRow: Codable {
     func toModel(connectedDevices: [ConnectedDevice]) -> UserProfile {
         UserProfile(
             id: id,
-            name: name,
+            name: normalizedName,
             email: nil,
             role: role,
             avatar: avatar,
@@ -387,7 +407,20 @@ private struct SupabaseUserRow: Codable {
     }
 
     var toElder: Elder {
-        Elder(id: id, name: name, avatar: avatar)
+        Elder(id: id, name: normalizedName, avatar: avatar)
+    }
+
+    private var normalizedName: String {
+        let trimmedName = name?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedName, !trimmedName.isEmpty {
+            return trimmedName
+        }
+
+        return SupabaseRepository.defaultName(for: role)
+    }
+
+    var isMissingName: Bool {
+        name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
     }
 }
 

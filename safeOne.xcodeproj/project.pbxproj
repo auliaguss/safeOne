@@ -14,9 +14,22 @@
 		219E090D2FBD7FC000118AB9 /* safeOne.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = safeOne.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D2C8EAA52FD30979005CA78D /* Exceptions for "safeOne" folder in "safeOne" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 219E090C2FBD7FC000118AB9 /* safeOne */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		219E090F2FBD7FC000118AB9 /* safeOne */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D2C8EAA52FD30979005CA78D /* Exceptions for "safeOne" folder in "safeOne" target */,
+			);
 			path = safeOne;
 			sourceTree = "<group>";
 		};
@@ -266,6 +279,7 @@
 				DEVELOPMENT_TEAM = V7RKC8F8WN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = safeOne/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -299,6 +313,7 @@
 				DEVELOPMENT_TEAM = V7RKC8F8WN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = safeOne/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

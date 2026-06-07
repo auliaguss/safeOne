@@ -3,6 +3,8 @@ import SwiftUI
 struct ReminderListView: View {
     @EnvironmentObject var appState: AppState
     @State private var showAddReminder = false
+    @State private var showPairingSheet = false
+    @State private var pairingCode = ""
 
     var body: some View {
         NavigationStack {
@@ -11,7 +13,13 @@ struct ReminderListView: View {
                     Text("Reminder")
                         .font(.headline)
                     Spacer()
-                    Button(action: { showAddReminder = true }) {
+                    Button(action: {
+                        if needsPairing {
+                            showPairingSheet = true
+                        } else {
+                            showAddReminder = true
+                        }
+                    }) {
                         ZStack {
                             Circle()
                                 .fill(Color.blue)
@@ -21,8 +29,6 @@ struct ReminderListView: View {
                                 .foregroundColor(.white)
                         }
                     }
-                    .disabled(appState.session?.user.role == .children && appState.selectedElder == nil)
-                    .opacity(appState.session?.user.role == .children && appState.selectedElder == nil ? 0.5 : 1.0)
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 12)
@@ -50,7 +56,7 @@ struct ReminderListView: View {
                     }
 
                     if currentReminders.isEmpty {
-                        Text("No reminders for this elder.")
+                        Text(appState.selectedElder == nil ? "Pair with an elder before adding reminders." : "No reminders for this elder.")
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity, alignment: .center)
                             .listRowSeparator(.hidden)
@@ -62,7 +68,12 @@ struct ReminderListView: View {
             .sheet(isPresented: $showAddReminder) {
                 AddReminderView()
             }
+            .sheet(isPresented: $showPairingSheet) {
+                pairingSheet
+            }
             .task {
+                await appState.loadPairings()
+                await appState.loadElders()
                 await appState.loadReminders(userID: appState.selectedElder?.id)
             }
             .onChange(of: appState.selectedElderIndex) {
@@ -76,6 +87,66 @@ struct ReminderListView: View {
     private var currentReminders: [Reminder] {
         appState.reminders.filter {
             !$0.isPast && $0.elderID == appState.selectedElder?.id
+        }
+    }
+
+    private var needsPairing: Bool {
+        appState.session?.user.role == .children && appState.selectedElder == nil
+    }
+
+    private var pairingSheet: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                Text("Enter the code shown on the elder device to connect their account.")
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+
+                TextField("Pairing code", text: $pairingCode)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .multilineTextAlignment(.center)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                if let apiMessage = appState.apiMessage {
+                    Text(apiMessage)
+                        .font(.footnote)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                }
+
+                Button {
+                    Task {
+                        let joined = await appState.joinPairing(code: pairingCode)
+                        if joined {
+                            pairingCode = ""
+                            showPairingSheet = false
+                            await appState.loadPairings()
+                            await appState.loadElders()
+                            await appState.loadReminders(userID: appState.selectedElder?.id)
+                        }
+                    }
+                } label: {
+                    Text("Connect Elder")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .disabled(pairingCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity(pairingCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.55 : 1.0)
+            }
+            .padding()
+            .navigationTitle("Pairing")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { showPairingSheet = false }
+                }
+            }
         }
     }
 }
