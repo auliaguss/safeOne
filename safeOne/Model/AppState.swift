@@ -14,6 +14,7 @@ final class AppState: ObservableObject {
     @Published var pairingCode: String?
     @Published var pairings: [PairingRecord] = []
     @Published var emergencyContacts: [EmergencyContact] = []
+    @Published var activeReminderAlert: Reminder?
 
     private let authService = AuthService()
     private let supabaseRepository = SupabaseRepository.shared
@@ -195,7 +196,7 @@ final class AppState: ObservableObject {
             do {
                 let created = try await supabaseRepository.upsertReminder(reminder)
                 addReminder(created)
-                await notificationService.schedule(reminder: created)
+                await notificationService.schedule(reminder: created, preferences: notificationPreferences)
                 await loadReminders(userID: created.elderID)
                 return true
             } catch {
@@ -215,7 +216,7 @@ final class AppState: ObservableObject {
                 do {
                     let updated = try await supabaseRepository.upsertReminder(reminder)
                     updateReminder(updated)
-                    await notificationService.schedule(reminder: updated)
+                    await notificationService.schedule(reminder: updated, preferences: notificationPreferences)
                     await loadReminders(userID: updated.elderID)
                     return true
                 } catch {
@@ -264,7 +265,7 @@ final class AppState: ObservableObject {
         updated.isCompleted = false
         reminders[index] = updated
         alertCoordinator.resetAlertState(for: updated.id)
-        await notificationService.schedule(reminder: updated)
+        await notificationService.schedule(reminder: updated, preferences: notificationPreferences)
         await saveReminder(updated)
     }
 
@@ -568,9 +569,11 @@ final class AppState: ObservableObject {
             while !Task.isCancelled {
                 guard let self else { return }
                 await MainActor.run { [self] in
-                    alertCoordinator.processDueReminders(reminders, preferences: notificationPreferences)
+                    if let dueReminder = alertCoordinator.processDueReminders(reminders, preferences: notificationPreferences) {
+                        activeReminderAlert = dueReminder
+                    }
                 }
-                try? await Task.sleep(for: .seconds(30))
+                try? await Task.sleep(for: .seconds(5))
             }
         }
     }
@@ -586,6 +589,9 @@ final class AppState: ObservableObject {
 
     private func removeReminderIDs(_ ids: [UUID]) {
         reminders.removeAll { ids.contains($0.id) }
+        if let activeReminderAlert, ids.contains(activeReminderAlert.id) {
+            self.activeReminderAlert = nil
+        }
         Task {
             for id in ids {
                 await notificationService.cancel(reminderID: id)
@@ -598,7 +604,22 @@ final class AppState: ObservableObject {
 
     private func rescheduleNotifications(for reminders: [Reminder]) async {
         for reminder in reminders {
-            await notificationService.schedule(reminder: reminder)
+            await notificationService.schedule(reminder: reminder, preferences: notificationPreferences)
+        }
+    }
+
+    func showReminderAlert(_ reminder: Reminder) {
+        activeReminderAlert = reminder
+    }
+
+    func dismissReminderAlert(for reminderID: UUID? = nil) {
+        guard let reminderID else {
+            activeReminderAlert = nil
+            return
+        }
+
+        if activeReminderAlert?.id == reminderID {
+            activeReminderAlert = nil
         }
     }
 

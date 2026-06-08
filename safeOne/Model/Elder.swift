@@ -56,6 +56,10 @@ struct Reminder: Identifiable, Codable, Equatable {
         self.isPast = isPast
         self.imageName = imageName
     }
+
+    var alertDate: Date {
+        date.addingTimeInterval(-earlyReminder.leadTimeInterval)
+    }
 }
 
 enum RepeatOption: String, CaseIterable, Codable {
@@ -97,6 +101,19 @@ enum EarlyReminderOption: String, CaseIterable, Codable {
             return "10 Minutes Before"
         case .thirtyMin:
             return "30 Minutes Before"
+        }
+    }
+
+    var leadTimeInterval: TimeInterval {
+        switch self {
+        case .none, .inTime:
+            return 0
+        case .fiveMin:
+            return 5 * 60
+        case .tenMin:
+            return 10 * 60
+        case .thirtyMin:
+            return 30 * 60
         }
     }
 }

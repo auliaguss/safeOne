@@ -20,7 +20,10 @@ struct ElderReminderModalView: View {
                 VStack(spacing: 0) {
                     HStack {
                         Spacer()
-                        Button(action: { dismiss() }) {
+                        Button(action: {
+                            appState.dismissReminderAlert(for: reminder.id)
+                            dismiss()
+                        }) {
                             Image(systemName: "xmark")
                                 .foregroundColor(.black)
                                 .font(.title3)
@@ -82,6 +85,7 @@ struct ElderReminderModalView: View {
                         Button {
                             Task {
                                 await appState.snoozeReminder(reminder)
+                                appState.dismissReminderAlert(for: reminder.id)
                                 dismiss()
                             }
                         } label: {
@@ -101,6 +105,7 @@ struct ElderReminderModalView: View {
                         Button {
                             Task {
                                 await appState.completeReminder(reminder)
+                                appState.dismissReminderAlert(for: reminder.id)
                                 dismiss()
                             }
                         } label: {

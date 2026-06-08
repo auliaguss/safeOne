@@ -3,7 +3,6 @@ import UIKit
 
 struct ElderDashboard: View {
     @EnvironmentObject var appState: AppState
-    @State private var selectedReminder: Reminder?
     @State private var showMissingContactAlert = false
 
     private var todaysReminders: [Reminder] {
@@ -49,7 +48,7 @@ struct ElderDashboard: View {
                             } else {
                                 ForEach(todaysEvents) { reminder in
                                     ElderEventRow(reminder: reminder) {
-                                        selectedReminder = reminder
+                                        appState.showReminderAlert(reminder)
                                     }
                                 }
                             }
@@ -73,7 +72,7 @@ struct ElderDashboard: View {
                                 } else {
                                     ForEach(todaysReminders) { reminder in
                                         ElderReminderRow(reminder: reminder) {
-                                            selectedReminder = reminder
+                                            appState.showReminderAlert(reminder)
                                         }
                                     }
                                 }
@@ -111,7 +110,7 @@ struct ElderDashboard: View {
                 .padding(.bottom, 8)
                 .background(Color(hex: "F2F2F7").opacity(0.96))
             }
-            .sheet(item: $selectedReminder) { item in
+            .sheet(item: $appState.activeReminderAlert) { item in
                 ElderReminderModalView(reminder: item)
             }
             .task {
