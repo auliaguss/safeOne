@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDisplayName</key>
-    <string>Hear+h</string>
+    <string>HearH</string>
 
     <key>UIBackgroundModes</key>
     <array>
@@ -12,17 +12,14 @@
         <string>audio</string>
     </array>
 
-    <!-- ✅ TAMBAHKAN INI -->
     <key>NSMicrophoneUsageDescription</key>
-    <string>Hear+h membutuhkan mikrofon untuk video call darurat</string>
+    <string>HearH membutuhkan mikrofon untuk video call darurat</string>
 
     <key>NSCameraUsageDescription</key>
-    <string>Hear+h membutuhkan kamera untuk video call darurat</string>
+    <string>HearH membutuhkan kamera untuk video call darurat</string>
     
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Hear+h membutuhkan akses galeri untuk foto reminder</string>
+    <string>HearH membutuhkan akses galeri untuk foto reminder</string>
 
-    <!-- NSAllowsArbitraryLoads intentionally omitted — production uses HTTPS (Vercel).
-         For local HTTP testing, add it back temporarily in a Debug-only Info.plist. -->
 </dict>
 </plist>
