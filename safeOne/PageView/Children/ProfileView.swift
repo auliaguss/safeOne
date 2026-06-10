@@ -77,8 +77,27 @@ struct ProfileView: View {
                     }
                 }
 
-                
+
             }
+            .scrollContentBackground(.hidden)
+            .background(
+                ZStack {
+                    Color.white
+                    RadialGradient(
+                        colors: [Color(red: 0, green: 218/255, blue: 195/255).opacity(0.15), Color.clear],
+                        center: UnitPoint(x: 0.2, y: 0.1),
+                        startRadius: 0,
+                        endRadius: 400
+                    )
+                    RadialGradient(
+                        colors: [Color(red: 0, green: 145/255, blue: 1.0).opacity(0.20), Color.clear],
+                        center: UnitPoint(x: 0.8, y: 0.8),
+                        startRadius: 0,
+                        endRadius: 400
+                    )
+                }
+                .ignoresSafeArea()
+            )
             .navigationDestination(isPresented: $goToOnboarding) {
                 Onboarding()
             }

@@ -32,7 +32,21 @@ struct ElderDashboard: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            Color(hex: "F2F2F7").ignoresSafeArea()
+            Color.white.ignoresSafeArea()
+            RadialGradient(
+                colors: [Color(red: 0, green: 218/255, blue: 195/255).opacity(0.15), Color.clear],
+                center: UnitPoint(x: 0.2, y: 0.1),
+                startRadius: 0,
+                endRadius: 400
+            )
+            .ignoresSafeArea()
+            RadialGradient(
+                colors: [Color(red: 0, green: 145/255, blue: 1.0).opacity(0.20), Color.clear],
+                center: UnitPoint(x: 0.8, y: 0.8),
+                startRadius: 0,
+                endRadius: 400
+            )
+            .ignoresSafeArea()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {

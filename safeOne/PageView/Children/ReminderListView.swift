@@ -39,8 +39,9 @@ struct ReminderListView: View {
             VStack(spacing: 0) {
                 // Nav bar
                 HStack {
-                    Text("Reminder")
-                        .font(.headline)
+                    Text("Reminder Setup")
+                        .font(.title2)
+                        .bold()
                     Spacer()
                     Button(action: { activeSheet = .create }) {
                         ZStack {
@@ -124,6 +125,24 @@ struct ReminderListView: View {
                     }
                 }
             }
+            .background(
+                ZStack {
+                    Color.white
+                    RadialGradient(
+                        colors: [Color(red: 0, green: 218/255, blue: 195/255).opacity(0.15), Color.clear],
+                        center: UnitPoint(x: 0.2, y: 0.1),
+                        startRadius: 0,
+                        endRadius: 400
+                    )
+                    RadialGradient(
+                        colors: [Color(red: 0, green: 145/255, blue: 1.0).opacity(0.20), Color.clear],
+                        center: UnitPoint(x: 0.8, y: 0.8),
+                        startRadius: 0,
+                        endRadius: 400
+                    )
+                }
+                .ignoresSafeArea()
+            )
             .navigationBarHidden(true)
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {

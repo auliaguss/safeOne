@@ -34,13 +34,19 @@ struct HealthInfoView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Background — gradient in both modes (subtle in edit)
-            LinearGradient(
-                colors: mode == .onboarding
-                    ? [.white, Color.cyan.opacity(0.15), Color.blue.opacity(0.12)]
-                    : [.white, Color.cyan.opacity(0.08), Color.blue.opacity(0.06)],
-                startPoint: .top,
-                endPoint: .bottom
+            Color.white.ignoresSafeArea()
+            RadialGradient(
+                colors: [Color(red: 0, green: 218/255, blue: 195/255).opacity(0.15), Color.clear],
+                center: UnitPoint(x: 0.2, y: 0.1),
+                startRadius: 0,
+                endRadius: 400
+            )
+            .ignoresSafeArea()
+            RadialGradient(
+                colors: [Color(red: 0, green: 145/255, blue: 1.0).opacity(0.20), Color.clear],
+                center: UnitPoint(x: 0.8, y: 0.8),
+                startRadius: 0,
+                endRadius: 400
             )
             .ignoresSafeArea()
 

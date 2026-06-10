@@ -19,20 +19,31 @@ struct Onboarding: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(
+                Color.white.ignoresSafeArea()
+                RadialGradient(
                     colors: [
-                        Color.white,
-                        Color.cyan.opacity(0.15),
-                        Color.blue.opacity(0.12)
+                        Color(red: 0, green: 218/255, blue: 195/255).opacity(0.20),
+                        Color.clear
                     ],
-                    startPoint: .top,
-                    endPoint: .bottom
+                    center: UnitPoint(x: 0.2, y: 0.1),
+                    startRadius: 0,
+                    endRadius: 400
+                )
+                .ignoresSafeArea()
+                RadialGradient(
+                    colors: [
+                        Color(red: 0, green: 145/255, blue: 1.0).opacity(0.25),
+                        Color.clear
+                    ],
+                    center: UnitPoint(x: 0.8, y: 0.8),
+                    startRadius: 0,
+                    endRadius: 400
                 )
                 .ignoresSafeArea()
 
                 VStack {
                     HStack(spacing: 8) {
-                        Image("AppLogo")
+                        Image("AppIconFlat")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 28, height: 28)
@@ -40,7 +51,7 @@ struct Onboarding: View {
                             .font(.title2)
                             .fontWeight(.bold)
                     }
-                    .padding(.top, 60)
+                    .padding(.top, 30)
 
                     Spacer()
 
@@ -55,42 +66,50 @@ struct Onboarding: View {
                             .stroke(Color.white.opacity(0.7), lineWidth: 3)
                             .frame(width: 500, height: 500)
 
-                        Text("👵🏻")
-                            .font(.system(size: 50))
-                            .frame(width: 177, height: 177)
+                        Image("avatar_elder")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 120, height: 120)
+                            .frame(width: 170, height: 170)
                             .background(Color.cyan.opacity(0.2))
                             .clipShape(Circle())
 
                         Text("❤️")
-                            .font(.system(size: 30))
-                            .offset(x: 100, y: -230)
+                            .font(.system(size: 35))
+                            .offset(x: 110, y: -220)
 
-                        Text("👨🏻‍🦱")
-                            .font(.system(size: 45))
-                            .padding(10)
-                            .background(Color.white.opacity(0.9))
+                        Image("avatar_child")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 55, height: 55)
+                            .frame(width: 80, height: 80)
+                            .background(Color.white.opacity(0.8))
                             .clipShape(Circle())
-                            .offset(x: -90, y: -230)
+                            .offset(x: -100, y: -220)
 
                         Text("💊")
-                            .font(.system(size: 35))
-                            .offset(x: -125, y: -90)
-
-                        Text("👨🏻‍🦱")
                             .font(.system(size: 45))
-                            .padding(10)
-                            .background(Color.white.opacity(0.9))
+                            .offset(x: -125, y: -100)
+
+                        Image("avatar_child")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 55, height: 55)
+                            .frame(width: 80, height: 80)
+                            .background(Color.white.opacity(0.8))
                             .clipShape(Circle())
                             .offset(x: 130, y: -105)
 
                         Text("⏰")
-                            .font(.system(size: 30))
-                            .offset(x: 90, y: 120)
+                            .font(.system(size: 40))
+                            .offset(x: 90, y: 125)
 
-                        Text("👨🏻‍🦱")
-                            .font(.system(size: 45))
-                            .padding(10)
-                            .background(Color.white.opacity(0.9))
+                        Image("avatar_child")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 55, height: 55)
+                            .frame(width: 80, height: 80)
+                            .background(Color.white.opacity(0.8))
                             .clipShape(Circle())
                             .offset(x: -90, y: 130)
                     }
@@ -123,7 +142,7 @@ struct Onboarding: View {
                                     .foregroundColor(.white)
                                     .frame(width: 300)
                                     .padding()
-                                    .background(isLoading ? Color.gray : Color.blue)
+                                    .background(isLoading ? Color.gray : Color.black)
                                     .clipShape(Capsule())
                             }
                             .disabled(isLoading)
@@ -136,7 +155,7 @@ struct Onboarding: View {
                                     .foregroundColor(.white)
                                     .frame(width: 300)
                                     .padding()
-                                    .background(isLoading ? Color.gray : Color.blue)
+                                    .background(isLoading ? Color.gray : Color.black)
                                     .clipShape(Capsule())
                             }
                             .disabled(isLoading)
