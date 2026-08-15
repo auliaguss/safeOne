@@ -81,9 +81,6 @@ struct ReminderRepository {
 
     // MARK: - Helpers
 
-    /// Throws a descriptive error when the server returns a non-2xx status.
-    /// Extracts the `"error"` field from the JSON body when present so the
-    /// message shown to the user is the real server reason, not a decode failure.
     private static func checkStatus(_ response: URLResponse, data: Data) throws {
         guard let http = response as? HTTPURLResponse else { return }
         guard (200...299).contains(http.statusCode) else {

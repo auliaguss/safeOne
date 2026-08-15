@@ -3,12 +3,27 @@
 //  safeOne
 //
 
+
 import Foundation
 
 enum AppConfig {
-   // #if DEBUG
-   // static let baseURL = "http://10.204.156.203:3000/api"
-   // #else
-    static let baseURL = "https://safe-one-backend.vercel.app/api"
-   // #endif
+    static let baseURL: String = {
+        guard let value = Bundle.main.object(
+            forInfoDictionaryKey: "API_BASE_URL"
+        ) as? String else {
+            fatalError("API_BASE_URL belum dikonfigurasi")
+        }
+
+        return value
+    }()
+
+    static let appID: String = {
+        guard let value = Bundle.main.object(
+            forInfoDictionaryKey: "APP_ID"
+        ) as? String else {
+            fatalError("APP_ID belum dikonfigurasi")
+        }
+
+        return value
+    }()
 }

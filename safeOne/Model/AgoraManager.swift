@@ -31,9 +31,8 @@ class AgoraManager: NSObject, ObservableObject {
     func setup(appId: String) {
         
         // 💡 1. MASUKKAN APP ID AGORA ASLI MILIKMU DI SINI (Di dalam tanda kutip)
-        // Pastikan persis 32 karakter huruf kecil dan angka, tanpa spasi!
-        let hardcodedAppID = "92a8aeae1db644dabe3cd77a614344dc"
-        
+        let hardcodedAppID = AppConfig.appID
+
         print("🔑 MENGHIDUPKAN AGORA DENGAN APP ID: '\(hardcodedAppID)'")
         print("📏 Panjang karakter App ID: \(hardcodedAppID.count)")
         

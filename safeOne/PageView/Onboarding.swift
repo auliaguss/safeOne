@@ -55,63 +55,74 @@ struct Onboarding: View {
 
                     Spacer()
 
-                    ZStack {
-                        Circle()
-                            .stroke(Color.white.opacity(0.7), lineWidth: 5)
-                            .frame(width: 180, height: 177)
-                        Circle()
-                            .stroke(Color.white.opacity(0.7), lineWidth: 3)
-                            .frame(width: 320, height: 320)
-                        Circle()
-                            .stroke(Color.white.opacity(0.7), lineWidth: 3)
-                            .frame(width: 500, height: 500)
+                    TimelineView(.animation) { context in
+                        let t = context.date.timeIntervalSinceReferenceDate
 
-                        Image("avatar_elder")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 120, height: 120)
-                            .frame(width: 170, height: 170)
-                            .background(Color.cyan.opacity(0.2))
-                            .clipShape(Circle())
+                        // Child avatars: 1 putaran per 12 detik (searah jarum jam)
+                        let childAngle = (t / 12).truncatingRemainder(dividingBy: 1) * 2 * .pi
 
-                        Text("❤️")
-                            .font(.system(size: 35))
-                            .offset(x: 110, y: -220)
+                        // Emojis: 1 putaran per 8 detik (berlawanan jarum jam)
+                        let emojiAngle = -(t / 8).truncatingRemainder(dividingBy: 1) * 2 * .pi
 
-                        Image("avatar_child")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 55, height: 55)
-                            .frame(width: 80, height: 80)
-                            .background(Color.white.opacity(0.8))
-                            .clipShape(Circle())
-                            .offset(x: -100, y: -220)
+                        let childRadius: CGFloat = 160
+                        let emojiRadius: CGFloat = 250
+                        let childBaseAngles: [Double] = [0, 2 * .pi / 3, 4 * .pi / 3]
+                        let emojis: [(String, Double)] = [
+                            ("❤️", .pi / 3),
+                            ("💊", .pi),
+                            ("⏰", 5 * .pi / 3)
+                        ]
 
-                        Text("💊")
-                            .font(.system(size: 45))
-                            .offset(x: -125, y: -100)
+                        ZStack {
+                            // Ring 1 — tengah
+                            Circle()
+                                .stroke(Color.white.opacity(0.7), lineWidth: 5)
+                                .frame(width: 180, height: 177)
+                            // Ring 2 — menengah
+                            Circle()
+                                .stroke(Color.white.opacity(0.7), lineWidth: 3)
+                                .frame(width: 320, height: 320)
+                            // Ring 3 — luar
+                            Circle()
+                                .stroke(Color.white.opacity(0.7), lineWidth: 3)
+                                .frame(width: 500, height: 500)
 
-                        Image("avatar_child")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 55, height: 55)
-                            .frame(width: 80, height: 80)
-                            .background(Color.white.opacity(0.8))
-                            .clipShape(Circle())
-                            .offset(x: 130, y: -105)
+                            // ── Elder avatar — DIAM di tengah ──
+                            Image("avatar_elder")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 120, height: 120)
+                                .frame(width: 170, height: 170)
+                                .background(Color.cyan.opacity(0.2))
+                                .clipShape(Circle())
 
-                        Text("⏰")
-                            .font(.system(size: 40))
-                            .offset(x: 90, y: 125)
+                            // ── Child avatars — orbit ring menengah ──
+                            ForEach(childBaseAngles.indices, id: \.self) { i in
+                                let angle = childAngle + childBaseAngles[i]
+                                Image("avatar_child")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 55, height: 55)
+                                    .frame(width: 80, height: 80)
+                                    .background(Color.white.opacity(0.8))
+                                    .clipShape(Circle())
+                                    .offset(
+                                        x: childRadius * cos(angle),
+                                        y: childRadius * sin(angle)
+                                    )
+                            }
 
-                        Image("avatar_child")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 55, height: 55)
-                            .frame(width: 80, height: 80)
-                            .background(Color.white.opacity(0.8))
-                            .clipShape(Circle())
-                            .offset(x: -90, y: 130)
+                            // ── Emojis — orbit ring luar, berlawanan arah ──
+                            ForEach(emojis.indices, id: \.self) { i in
+                                let angle = emojiAngle + emojis[i].1
+                                Text(emojis[i].0)
+                                    .font(.system(size: 38))
+                                    .offset(
+                                        x: emojiRadius * cos(angle),
+                                        y: emojiRadius * sin(angle)
+                                    )
+                            }
+                        }
                     }
                     .frame(height: 400)
 

@@ -158,7 +158,7 @@ struct ElderDashboard: View {
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundColor(.black)
             Text(doneToday.isEmpty
-                 ? "No reminders today — enjoy your day."
+                 ? "No reminders today, enjoy your day."
                  : "All reminders for today are done.")
                 .font(.system(size: 16, design: .rounded))
                 .foregroundColor(.gray)
