@@ -1,0 +1,122 @@
+--- ./PageView/SetupProfileView.swift ---
+Set up
+your profile
+Continue
+--- ./PageView/Onboarding.swift ---
+Healder
+What's your role?
+--- ./PageView/Elder/ElderDashboard.swift ---
+Daily Reminder
+SOS
+Emergency SOS call
+You're all caught up!
+·
+Repeats \(reminder.repeatOption.lowercased())
+--- ./PageView/Elder/ElderReminderModalView.swift ---
+Done! Great job ✓
+Read Again
+Snooze 5 minutes
+--- ./PageView/Elder/ElderDashboardSubview.swift ---
+Today's Reminders
+Tidak ada reminder hari ini
+--- ./PageView/Elder/ElderCallingView.swift ---
+Menunggu caregiver...
+Calling for Help
+If this was a mistake,\nplease tap Cancel.
+Cancel
+--- ./PageView/Elder/ElderProfileView.swift ---
+Elder
+Share this code with your caregiver
+Expires in \(otpSecondsLeft)s
+Regenerate
+Generate Caregiver Code
+Connect Caregiver
+Generate a 6-digit code for your caregiver to enter in their app. Code expires in 30 seconds.
+Profile
+Edit Profile
+Cancel
+Save
+No caregivers connected yet
+Caregiver
+Family
+--- ./PageView/Elder/ElderReminderFullScreenView.swift ---
+Done! Great job ✓
+Dismiss reminder
+Read Again
+Snooze 5 minutes
+Mark as Done
+--- ./PageView/Elder/HealthInfoView.swift ---
+Set Up Later
+Health Information
+Add health details to personalize the care\nexperience. You can update them later.
+Date of Birth
+Blood Type
+—
+Insurance Information
+Date of Birth
+Done
+--- ./PageView/Call/OngoingCallView.swift ---
+Emergency Call
+SOS
+--- ./PageView/Call/OutgoingCallView.swift ---
+Calling for Help
+If this was a mistake,\nplease tap Cancel.
+Cancel
+--- ./PageView/Call/IncomingCallView.swift ---
+Menunggu video elder...
+Emergency Call
+Tolak
+Terima
+--- ./PageView/Call/SOSContactsView.swift ---
+Hubungi Bantuan
+Tutup
+--- ./PageView/Children/DashboardView.swift ---
+Daily Check-In
+No reminders today!
+Select Date
+Done
+\(done)/\(total)
+--- ./PageView/Children/ReminderDetailView.swift ---
+\(reminder.completedCount) of \(reminder.totalCount) completed
+Delete Reminder
+Reminder Details
+Delete Reminder
+Delete
+Cancel
+Are you sure you want to delete \
+--- ./PageView/Children/ProfileView.swift ---
+Children
+Alerts
+Profile
+Edit Profile
+Cancel
+Save
+Belum ada elder yang terhubung
+Elder
+Elder Lists
+Add Elder via OTP
+Add
+Cancel
+--- ./PageView/Children/AddReminderView.swift ---
+Assign to Elder
+No elders connected
+Date & Time
+Start Date
+End Date
+Remove end date
+Time
+Add Time
+Delete Reminder
+Delete Reminder
+Delete
+Cancel
+Are you sure you want to delete \
+--- ./PageView/Children/DataPrivacyView.swift ---
+Your privacy matters
+SafeOne collects only what's needed to keep elders safe and families connected. We never sell your data.
+We do not sell your data to anyone.
+Last updated: June 2025
+Data & Privacy
+--- ./PageView/Children/ReminderListView.swift ---
+Reminder Setup
+No reminders yet

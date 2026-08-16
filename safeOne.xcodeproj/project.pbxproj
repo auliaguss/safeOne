@@ -126,12 +126,12 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A142BD2D2FD05D860000D46F /* Exceptions for "safeOne" folder in "HeartH" target */ = {
+		A142BD2D2FD05D860000D46F /* Exceptions for "safeOne" folder in "Healder" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 219E090C2FBD7FC000118AB9 /* HeartH */;
+			target = 219E090C2FBD7FC000118AB9 /* Healder */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -139,7 +139,7 @@
 		219E090F2FBD7FC000118AB9 /* safeOne */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				A142BD2D2FD05D860000D46F /* Exceptions for "safeOne" folder in "HeartH" target */,
+				A142BD2D2FD05D860000D46F /* Exceptions for "safeOne" folder in "Healder" target */,
 			);
 			path = safeOne;
 			sourceTree = "<group>";
@@ -299,9 +299,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		219E090C2FBD7FC000118AB9 /* HeartH */ = {
+		219E090C2FBD7FC000118AB9 /* Healder */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 219E09182FBD7FC100118AB9 /* Build configuration list for PBXNativeTarget "HeartH" */;
+			buildConfigurationList = 219E09182FBD7FC100118AB9 /* Build configuration list for PBXNativeTarget "Healder" */;
 			buildPhases = (
 				219E09092FBD7FC000118AB9 /* Sources */,
 				219E090A2FBD7FC000118AB9 /* Frameworks */,
@@ -315,7 +315,7 @@
 			fileSystemSynchronizedGroups = (
 				219E090F2FBD7FC000118AB9 /* safeOne */,
 			);
-			name = HeartH;
+			name = Healder;
 			packageProductDependencies = (
 				A142BD012FD040840000D46F /* AIAEC */,
 				A142BD032FD040840000D46F /* AIAECLL */,
@@ -371,7 +371,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				219E090C2FBD7FC000118AB9 /* HeartH */,
+				219E090C2FBD7FC000118AB9 /* Healder */,
 			);
 		};
 /* End PBXProject section */
@@ -654,7 +654,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		219E09182FBD7FC100118AB9 /* Build configuration list for PBXNativeTarget "HeartH" */ = {
+		219E09182FBD7FC100118AB9 /* Build configuration list for PBXNativeTarget "Healder" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				219E09192FBD7FC100118AB9 /* Debug */,

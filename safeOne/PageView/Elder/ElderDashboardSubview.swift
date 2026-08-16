@@ -22,7 +22,7 @@ struct ElderDashboardSubview: View {
                             .foregroundColor(.black)
 
                         if reminders.isEmpty {
-                            Text("Tidak ada reminder hari ini")
+                            Text("No reminders today")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                                 .padding(.top, 8)

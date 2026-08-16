@@ -31,7 +31,7 @@ struct ElderCallingView: View {
                     VStack {
                         Spacer()
                         ProgressView().tint(.white)
-                        Text("Menunggu caregiver...")
+                        Text("Waiting for accept...")
                             .foregroundColor(.white)
                             .padding(.top, 8)
                         Spacer()

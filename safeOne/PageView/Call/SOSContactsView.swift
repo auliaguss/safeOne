@@ -43,11 +43,11 @@ struct SOSContactsView: View {
                     }
                 }
             }
-            .navigationTitle("Hubungi Bantuan")
+            .navigationTitle("Contact Help")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Tutup") { dismiss() }
+                    Button("Close") { dismiss() }
                 }
             }
             .onAppear {

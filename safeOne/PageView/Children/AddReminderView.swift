@@ -152,7 +152,7 @@ struct AddReminderView: View {
                             .padding(.horizontal)
                         }
 
-                        Text(usePhoto ? "Foto dari galeri" : "Pilih emoji atau foto")
+                        Text(usePhoto ? "Photo from gallery" : "Choose emoji or photo")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -514,7 +514,7 @@ struct AddReminderView: View {
             return
         }
         guard let targetElderId = selectedElderId else {
-            errorMessage = "Pilih elder terlebih dahulu"
+            errorMessage = "Please select an elder first"
             return
         }
 

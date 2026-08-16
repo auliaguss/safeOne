@@ -35,7 +35,7 @@ struct IncomingCallView: View {
                         .ignoresSafeArea()
                 } else {
                     Color.black.ignoresSafeArea()
-                    Text("Menunggu video elder...")
+                    Text("Waiting for elder's video...")
                         .foregroundColor(.white)
                 }
                 VStack {
@@ -118,7 +118,7 @@ struct IncomingCallView: View {
                                         .background(Color.red)
                                         .clipShape(Circle())
                                 }
-                                Text("Tolak").font(.caption).foregroundColor(.secondary)
+                                Text("Decline").font(.caption).foregroundColor(.secondary)
                             }
                             
                             VStack(spacing: 8) {
@@ -133,7 +133,7 @@ struct IncomingCallView: View {
                                         .background(Color.green)
                                         .clipShape(Circle())
                                 }
-                                Text("Terima").font(.caption).foregroundColor(.secondary)
+                                Text("Accept").font(.caption).foregroundColor(.secondary)
                             }
                         }
                         .padding(.bottom, 60)

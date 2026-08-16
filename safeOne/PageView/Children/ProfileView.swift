@@ -240,7 +240,7 @@ struct ElderListView: View {
             if isLoading {
                 HStack { Spacer(); ProgressView(); Spacer() }
             } else if elders.isEmpty {
-                Text("Belum ada elder yang terhubung")
+                Text("No elders connected yet")
                     .foregroundColor(.secondary)
                     .padding(.vertical, 8)
             } else {
