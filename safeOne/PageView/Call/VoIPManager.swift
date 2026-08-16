@@ -3,9 +3,13 @@ import PushKit
 import CallKit
 import SwiftUI
 import AVFoundation
+import Combine
+import AgoraRtcKit
 
-class VoIPManager: NSObject {
+class VoIPManager: NSObject, ObservableObject {
     static let shared = VoIPManager()
+    
+    @Published var isAnsweredFromCallKit = false
     
     private var pushRegistry: PKPushRegistry?
     private var callKitProvider: CXProvider?
@@ -16,7 +20,7 @@ class VoIPManager: NSObject {
     private var pendingCallData: IncomingCallData?
     private var pendingAnswerAction: CXAnswerCallAction?
     private var pendingVoipToken: String? = nil  // ← tambah ini
-
+    
     override init() {
         super.init()
         setupCallKit()
@@ -60,7 +64,7 @@ class VoIPManager: NSObject {
         pendingVoipToken = nil
         await sendVoipTokenToBackend(token: token, jwtToken: jwtToken)
     }
-
+    
     private func sendVoipTokenToBackend(token: String) async {
         guard let appState = self.appState,
               let jwtToken = appState.token else {
@@ -165,6 +169,8 @@ extension VoIPManager: CXProviderDelegate {
         print("🔊 didActivate — waktu: \(Date())")
         print("🔊 CallKit: Audio Session Diaktifkan")
         DispatchQueue.main.async {
+            // Beri tahu Agora SDK bahwa audio session sudah aktif dari CallKit
+            AgoraManager.shared.agoraKit?.setAudioSessionOperationRestriction(.all)
             AgoraManager.shared.executePendingJoin()
         }
     }
@@ -177,14 +183,67 @@ extension VoIPManager: CXProviderDelegate {
         print("📲 User answer dari CallKit — buka layar Terima/Tolak")
         
         DispatchQueue.main.async {
-            guard let appState = self.appState else { return }
+            guard let appState = self.appState else {
+                action.fulfill()
+                return
+            }
             if appState.incomingCall == nil, let pending = self.pendingCallData {
                 appState.incomingCall = pending
                 appState.stopPolling()
             }
+            
+            guard let callData = appState.incomingCall ?? self.pendingCallData else {
+                action.fulfill()
+                return
+            }
+            
+            // Tandai bahwa call dijawab dari CallKit
+            self.isAnsweredFromCallKit = true
+            appState.inActiveCall = true
+            
+            // Panggil backend /answer untuk mendapatkan Agora token,
+            // lalu setup pendingJoin agar didActivate bisa langsung join channel
+            Task {
+                await self.answerAndPrepareAgora(callData: callData, appState: appState)
+                action.fulfill()
+            }
         }
         
-        action.fulfill()
+        
+    }
+    
+    /// Panggil backend /answer dan siapkan Agora untuk join saat didActivate
+    private func answerAndPrepareAgora(callData: IncomingCallData, appState: AppState) async {
+        guard let token = appState.token,
+              let url = URL(string: "\(AppConfig.baseURL)/calls/\(callData.callId)/answer")
+        else { return }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(for: request)
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let agoraToken = json["agoraToken"] as? String else {
+                print("❌ Gagal mendapatkan Agora token dari /answer")
+                return
+            }
+            
+            await MainActor.run {
+                // Setup Agora engine dan simpan sebagai pending join
+                // didActivate dari CallKit akan memanggil executePendingJoin()
+                AgoraManager.shared.setup(appId: callData.agoraAppId)
+                AgoraManager.shared.joinWhenReady(
+                    token: agoraToken,
+                    channelName: callData.channelName,
+                    appId: callData.agoraAppId
+                )
+                print("✅ Agora siap — menunggu didActivate dari CallKit")
+            }
+        } catch {
+            print("❌ Error saat answer call dari CallKit: \(error)")
+        }
     }
     
     func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
@@ -216,3 +275,4 @@ extension VoIPManager: CXProviderDelegate {
         }
     }
 }
+

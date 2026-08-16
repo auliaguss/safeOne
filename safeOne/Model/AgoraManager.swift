@@ -17,10 +17,11 @@ class AgoraManager: NSObject, ObservableObject {
     var agoraKit: AgoraRtcEngineKit?
     
     var pendingJoin: (token: String, channel: String, appId: String)?
-
+    
     @Published var remoteUid: UInt? = nil        // UID lawan bicara
     @Published var isLocalAudioMuted = false
     @Published var isLocalVideoMuted = false
+    @Published var isJoinedChannel = false         // True setelah berhasil join channel
     
     override init() {
         super.init()
@@ -32,7 +33,7 @@ class AgoraManager: NSObject, ObservableObject {
         
         // 💡 1. MASUKKAN APP ID AGORA ASLI MILIKMU DI SINI (Di dalam tanda kutip)
         let hardcodedAppID = AppConfig.appID
-
+        
         print("🔑 MENGHIDUPKAN AGORA DENGAN APP ID: '\(hardcodedAppID)'")
         print("📏 Panjang karakter App ID: \(hardcodedAppID.count)")
         
@@ -78,6 +79,7 @@ class AgoraManager: NSObject, ObservableObject {
             print("👋 Left channel, duration: \(stats.duration)s")
         }
         remoteUid = nil
+        isJoinedChannel = false
     }
     
     // MARK: - Setup Local Video
@@ -110,13 +112,13 @@ class AgoraManager: NSObject, ObservableObject {
         agoraKit?.muteLocalVideoStream(isLocalVideoMuted)
     }
     
-
+    
     func joinWhenReady(token: String, channelName: String, appId: String) {
         pendingJoin = (token, channelName, appId)
         // Jika audio sudah aktif (misal user buka app langsung), langsung join
         // Kalau tidak, tunggu didActivate dari CallKit
     }
-
+    
     func executePendingJoin() {
         guard let pending = pendingJoin else { return }
         setup(appId: pending.appId)
@@ -145,13 +147,16 @@ extension AgoraManager: AgoraRtcEngineDelegate {
     
     // Local user joined
     func rtcEngine(_ engine: AgoraRtcEngineKit, didJoinChannel channel: String, withUid uid: UInt, elapsed: Int) {
+        DispatchQueue.main.async {
+            self.isJoinedChannel = true
+        }
         print("🎙️ Local joined channel: \(channel)")
     }
     
     func rtcEngine(_ engine: AgoraRtcEngineKit, didOccurError errorCode: AgoraErrorCode) {
         print("❌ Agora error: \(errorCode.rawValue)")
     }
-
+    
     func rtcEngine(_ engine: AgoraRtcEngineKit, didAudioRouteChanged routing: AgoraAudioOutputRouting) {
         print("🔊 Audio route changed: \(routing.rawValue)")
     }

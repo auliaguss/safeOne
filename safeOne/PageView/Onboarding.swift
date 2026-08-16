@@ -47,7 +47,7 @@ struct Onboarding: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: 28, height: 28)
-                        Text("Hear+h")
+                        Text("Healder")
                             .font(.title2)
                             .fontWeight(.bold)
                     }

@@ -200,14 +200,6 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
-		A1F145D0303050FA00435DFC /* Extensions */ = {
-			isa = PBXGroup;
-			children = (
-				A1F14568303050FA00435DFC /* Color+Extension.swift */,
-			);
-			path = Extensions;
-			sourceTree = "<group>";
-		};
 		A1F14575303050FA00435DFC /* Model */ = {
 			isa = PBXGroup;
 			children = (
@@ -294,6 +286,14 @@
 				A1F14598303050FA00435DFC /* safeOneApp.swift */,
 			);
 			path = safeOne;
+			sourceTree = "<group>";
+		};
+		A1F145D0303050FA00435DFC /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				A1F14568303050FA00435DFC /* Color+Extension.swift */,
+			);
+			path = Extensions;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -575,7 +575,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = safeOne/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = HeartH;
+				INFOPLIST_KEY_CFBundleDisplayName = Healder;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Need to use";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "";
@@ -584,7 +584,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -615,7 +615,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = safeOne/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = HeartH;
+				INFOPLIST_KEY_CFBundleDisplayName = Healder;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Need to use";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "";
@@ -624,7 +624,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
