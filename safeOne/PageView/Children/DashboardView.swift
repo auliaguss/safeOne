@@ -8,6 +8,7 @@ import Combine
 
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var tutorialManager: TutorialManager
 
     @State private var elders: [ElderItem] = []
     @State private var selectedElderId: String? = nil
@@ -41,35 +42,45 @@ struct DashboardView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 12)
 
-                // Elder Selector — same pill style as ElderSelectorView
-                if !elders.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(elders) { elder in
-                                Button {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        selectedElderId = elder.id
+                // Elder Selector — same pill style as ElderSelectorView.
+                // Always rendered (even with an empty-state hint) so it's a stable,
+                // real anchor for the tutorial regardless of whether elders are loaded yet.
+                Group {
+                    if elders.isEmpty {
+                        Text("Connect an elder in Profile to get started")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(elders) { elder in
+                                    Button {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            selectedElderId = elder.id
+                                        }
+                                        Task { await fetchReminders() }
+                                    } label: {
+                                        Text(elder.name)
+                                            .font(.subheadline)
+                                            .fontWeight(selectedElderId == elder.id ? .semibold : .regular)
+                                            .foregroundColor(selectedElderId == elder.id ? .white : .primary)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 8)
+                                            .background(
+                                                Capsule()
+                                                    .fill(selectedElderId == elder.id ? Color.black : Color(.systemGray5))
+                                            )
                                     }
-                                    Task { await fetchReminders() }
-                                } label: {
-                                    Text(elder.name)
-                                        .font(.subheadline)
-                                        .fontWeight(selectedElderId == elder.id ? .semibold : .regular)
-                                        .foregroundColor(selectedElderId == elder.id ? .white : .primary)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            Capsule()
-                                                .fill(selectedElderId == elder.id ? Color.black : Color(.systemGray5))
-                                        )
                                 }
+                                Spacer()
                             }
-                            Spacer()
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
                     }
-                    .padding(.bottom, 16)
                 }
+                .padding(.bottom, 16)
+                .tutorialAnchor("child.elders")
 
                 Divider()
 
@@ -147,6 +158,10 @@ struct DashboardView: View {
         }
         .task {
             await fetchElders()
+            // Give the elder selector one render pass to lay out before the
+            // tutorial tries to spotlight it.
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            tutorialManager.startChildTutorialIfNeeded(appState: appState)
         }
     }
 

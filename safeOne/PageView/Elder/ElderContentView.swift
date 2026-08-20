@@ -9,11 +9,11 @@ struct ElderContentView: View {
     @EnvironmentObject var appState: AppState
     
     var body: some View {
-        TabView {
-            Tab("Dashboard", systemImage: "checklist") {
+        TabView(selection: $appState.elderTabSelection) {
+            Tab("Dashboard", systemImage: "checklist", value: ElderTab.dashboard) {
                 ElderDashboard()
             }
-            Tab("Profile", systemImage: "person") {
+            Tab("Profile", systemImage: "person", value: ElderTab.profile) {
                 ElderProfileView()
             }
         }

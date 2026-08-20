@@ -7,11 +7,23 @@ import Foundation
 import Combine
 import SwiftUI
 
+enum ElderTab: Hashable {
+    case dashboard, profile
+}
+
+enum ChildTab: Hashable {
+    case dashboard, reminders, profile
+}
+
 class AppState: ObservableObject {
-    
+
     // MARK: - Auth
     @Published var token: String? = nil
     @Published var currentUser: CurrentUser? = nil
+
+    // MARK: - Tab selection (used by TutorialManager to surface a step's real target)
+    @Published var elderTabSelection: ElderTab = .dashboard
+    @Published var childTabSelection: ChildTab = .dashboard
 
     // MARK: - Reminder deep-link (set when user taps a push notification)
     @Published var pendingReminderDeepLink: String? = nil

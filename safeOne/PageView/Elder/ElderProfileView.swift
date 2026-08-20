@@ -84,6 +84,7 @@ struct ElderProfileView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
+                        .tutorialAnchor("elder.connectCode")
                     } else {
                         Button {
                             Task { await generateOtp() }
@@ -98,6 +99,7 @@ struct ElderProfileView: View {
                             }
                         }
                         .disabled(isGeneratingOtp)
+                        .tutorialAnchor("elder.connectCode")
                     }
                 } header: {
                     Text("Connect Caregiver")

@@ -58,6 +58,7 @@ struct ReminderListView: View {
                         }
                     }
                     .disabled(isLoading)
+                    .tutorialAnchor("child.reminders.add")
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 12)

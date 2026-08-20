@@ -8,6 +8,7 @@ import AVFoundation
 
 struct ElderDashboard: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var tutorialManager: TutorialManager
     @StateObject private var vm = ReminderViewModel()
 
     @State private var showCallingScreen = false
@@ -67,17 +68,20 @@ struct ElderDashboard: View {
                             .frame(maxWidth: .infinity)
                             .padding(.top, 20)
                     } else {
-                        // Step 5.3 — "Caught up" state when no active reminders
-                        if activeToday.isEmpty {
-                            caughtUpView
-                        }
+                        VStack(alignment: .leading, spacing: 28) {
+                            // Step 5.3 — "Caught up" state when no active reminders
+                            if activeToday.isEmpty {
+                                caughtUpView
+                            }
 
-                        if !activeToday.isEmpty {
-                            reminderSection("Today's Reminder", items: activeToday, tappable: true, completed: false)
+                            if !activeToday.isEmpty {
+                                reminderSection("Today's Reminder", items: activeToday, tappable: true, completed: false)
+                            }
+                            if !doneToday.isEmpty {
+                                reminderSection("Done Today", items: doneToday, tappable: false, completed: true)
+                            }
                         }
-                        if !doneToday.isEmpty {
-                            reminderSection("Done Today", items: doneToday, tappable: false, completed: true)
-                        }
+                        .tutorialAnchor("elder.reminders")
                     }
 
                     Spacer(minLength: 96)
@@ -99,6 +103,7 @@ struct ElderDashboard: View {
                 .background(Color(hex: "FF5E5B")).clipShape(Circle())
                 .shadow(color: Color(hex: "FF5E5B").opacity(0.4), radius: 8, x: 0, y: 4)
             }
+            .tutorialAnchor("elder.sos")
             .accessibilityLabel("Emergency SOS call")
             .padding(.trailing, 24)
             .padding(.bottom, 20)
@@ -125,6 +130,11 @@ struct ElderDashboard: View {
                 selectedReminder = reminder
                 appState.pendingReminderDeepLink = nil
             }
+
+            // Give the reminder list one render pass to lay out before the
+            // tutorial tries to spotlight it.
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            tutorialManager.startElderTutorialIfNeeded(appState: appState)
 
             // Polling loop — keeps elder dashboard in sync with child edits.
             // SwiftUI cancels this task automatically when the view disappears.

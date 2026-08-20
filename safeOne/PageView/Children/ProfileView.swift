@@ -54,6 +54,7 @@ struct ProfileView: View {
                         ElderListView()
                             .environmentObject(appState)
                     }
+                    .tutorialAnchor("child.connectElder")
                 }
 
                 // Notification

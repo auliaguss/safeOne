@@ -16,6 +16,7 @@ struct safeOneApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     @StateObject private var appState = AppState()
+    @StateObject private var tutorialManager = TutorialManager()
     private let voipManager = VoIPManager.shared
     
     init() {
@@ -34,8 +35,25 @@ struct safeOneApp: App {
                 // user ke ContentView (Child) atau ElderContentView berdasarkan data di backend.
                 Onboarding()
                     .environmentObject(appState)
+                    .environmentObject(tutorialManager)
                     .zIndex(0)
-                
+                    // The tutorial overlay blocks all touches on the real UI anyway;
+                    // hide it from VoiceOver too so swipe navigation can't wander into it.
+                    .accessibilityHidden(tutorialManager.isActive)
+
+                // ==========================================
+                // LAYER 1B: ONBOARDING TUTORIAL (COACHMARK)
+                // ==========================================
+                // Sits above the real UI but below the reminder/call overlays —
+                // an incoming emergency call must always be able to interrupt it.
+                if tutorialManager.isActive {
+                    TutorialOverlayView()
+                        .environmentObject(appState)
+                        .environmentObject(tutorialManager)
+                        .zIndex(1)
+                        .transition(.opacity)
+                }
+
                 // ==========================================
                 // LAYER 2: FULL-SCREEN REMINDER (ELDER)
                 // ==========================================
@@ -70,6 +88,10 @@ struct safeOneApp: App {
             }
             // Memberikan animasi halus saat layar panggilan masuk/keluar
             .animation(.easeInOut, value: appState.incomingCall != nil)
+            .animation(.easeInOut, value: tutorialManager.isActive)
+            .onPreferenceChange(TutorialAnchorPreferenceKey.self) { anchors in
+                tutorialManager.anchors = anchors
+            }
             .onAppear {
                 // Hubungkan objek appState ke VoIPManager agar ketika payload push masuk,
                 // data panggilan bisa langsung memperbarui state incomingCall secara global.

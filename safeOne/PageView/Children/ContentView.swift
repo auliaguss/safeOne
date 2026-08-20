@@ -12,14 +12,14 @@ struct ContentView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        TabView {
-            Tab("Dashboard", systemImage: "checklist") {
+        TabView(selection: $appState.childTabSelection) {
+            Tab("Dashboard", systemImage: "checklist", value: ChildTab.dashboard) {
                 DashboardView()
             }
-            Tab("Reminder", systemImage: "bell") {
+            Tab("Reminder", systemImage: "bell", value: ChildTab.reminders) {
                 ReminderListView()
             }
-            Tab("Profile", systemImage: "person") {
+            Tab("Profile", systemImage: "person", value: ChildTab.profile) {
                 ProfileView()
             }
         }
