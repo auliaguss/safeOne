@@ -118,7 +118,16 @@ extension VoIPManager: PKPushRegistryDelegate {
               let elderName = customData["elderName"] as? String,
               let channelName = customData["channelName"] as? String,
               let agoraAppId = customData["agoraAppId"] as? String else {
-            completion()
+            // Apple requires reportNewIncomingCall for every VoIP push we receive, even
+            // ones we can't use — skipping it risks iOS throttling/blocking future VoIP
+            // pushes to this app. Report a generic call, then immediately end it.
+            let fallbackUUID = UUID()
+            let update = CXCallUpdate()
+            update.remoteHandle = CXHandle(type: .generic, value: "Emergency Call")
+            callKitProvider?.reportNewIncomingCall(with: fallbackUUID, update: update) { [weak self] _ in
+                self?.callKitProvider?.reportCall(with: fallbackUUID, endedAt: Date(), reason: .failed)
+                completion()
+            }
             return
         }
         
@@ -190,23 +199,28 @@ extension VoIPManager: CXProviderDelegate {
     func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
         print("📴 Panggilan diakhiri dari CallKit")
         AgoraManager.shared.leaveChannel()
-        
-        guard let appState = self.appState, let incomingCall = appState.incomingCall else {
+
+        // Fall back to the push-delivered pendingCallData's callId when appState.incomingCall
+        // hasn't been set yet (e.g. user declines from the lock screen before the push
+        // handler's main-queue hop has landed) — otherwise the backend is never told the
+        // call was declined/ended, and the caller keeps waiting.
+        guard let appState = self.appState,
+              let token = appState.token,
+              let callId = appState.incomingCall?.callId ?? pendingCallData?.callId else {
             self.pendingCallData = nil
             action.fulfill()
             return
         }
-        
+
         Task {
             let roleEndpoint = appState.inActiveCall ? "end" : "decline"
-            if let token = appState.token,
-               let url = URL(string: "\(AppConfig.baseURL)/calls/\(incomingCall.callId)/\(roleEndpoint)") {
+            if let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/\(roleEndpoint)") {
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                 _ = try? await URLSession.shared.data(for: request)
             }
-            
+
             await MainActor.run {
                 appState.inActiveCall = false
                 appState.incomingCall = nil

@@ -529,6 +529,14 @@ struct AddReminderView: View {
         comps.minute = firstTimeComps.minute
         let finalDate = cal.date(from: comps) ?? startDate
 
+        // Only guard on creation — an existing reminder being edited may legitimately
+        // already be in the past (e.g. fixing a typo in its title).
+        if !isEditing && finalDate < Date() {
+            isSaving = false
+            errorMessage = "That time is in the past — pick a future date and time."
+            return
+        }
+
         // Times as UTC "HH:mm" strings so the server-side scheduler can compare directly
         let timeFmt = DateFormatter()
         timeFmt.timeZone = TimeZone(abbreviation: "UTC")

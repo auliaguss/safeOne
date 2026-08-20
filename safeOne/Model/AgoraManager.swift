@@ -27,19 +27,17 @@ class AgoraManager: NSObject, ObservableObject {
     }
     
     // MARK: - Setup Engine
-    // MARK: - Setup Engine
     func setup(appId: String) {
-        
-        // 💡 1. MASUKKAN APP ID AGORA ASLI MILIKMU DI SINI (Di dalam tanda kutip)
-        let hardcodedAppID = AppConfig.appID
 
-        print("🔑 MENGHIDUPKAN AGORA DENGAN APP ID: '\(hardcodedAppID)'")
-        print("📏 Panjang karakter App ID: \(hardcodedAppID.count)")
-        
-        // 2. Gunakan hardcodedAppID, BUKAN appId dari parameter
+        print("🔑 MENGHIDUPKAN AGORA DENGAN APP ID: '\(appId)'")
+        print("📏 Panjang karakter App ID: \(appId.count)")
+
+        // Use the App ID the backend handed us for this call — Agora tokens are
+        // cryptographically bound to the App ID they were generated for, so joining
+        // with a different (build-time) App ID would make a valid server token fail auth.
         let config = AgoraRtcEngineConfig()
-        config.appId = hardcodedAppID
-        
+        config.appId = appId
+
         agoraKit = AgoraRtcEngineKit.sharedEngine(with: config, delegate: self)
         
         agoraKit?.enableVideo()
@@ -77,6 +75,7 @@ class AgoraManager: NSObject, ObservableObject {
         agoraKit?.leaveChannel { stats in
             print("👋 Left channel, duration: \(stats.duration)s")
         }
+        agoraKit?.stopPreview() // Camera preview isn't tied to channel membership — stop it explicitly.
         remoteUid = nil
     }
     

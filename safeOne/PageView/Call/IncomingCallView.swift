@@ -23,6 +23,7 @@ struct IncomingCallView: View {
     @State private var callDuration = 0
     @State private var showSOS = false
     @State private var hasRemoteUserJoined = false
+    @State private var isProcessing = false
 
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -66,6 +67,7 @@ struct IncomingCallView: View {
                                     .background(Color.red)
                                     .clipShape(Circle())
                             }
+                            .disabled(isProcessing)
                             Text("Tolak").font(.caption).foregroundColor(.secondary)
                         }
 
@@ -81,6 +83,7 @@ struct IncomingCallView: View {
                                     .background(Color.green)
                                     .clipShape(Circle())
                             }
+                            .disabled(isProcessing)
                             Text("Terima").font(.caption).foregroundColor(.secondary)
                         }
                     }
@@ -186,18 +189,23 @@ struct IncomingCallView: View {
 
     // MARK: - Accept
     private func acceptCall() async {
+        guard !isProcessing else { return }
+        isProcessing = true
         print("📞 acceptCall() dipanggil — waktu: \(Date())")
 
         // Set TRUE paling awal — polling tidak akan nil-kan incomingCall selagi ini true
         await MainActor.run { appState.inActiveCall = true }
-        
+
         try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 detik
 
-        
+
         guard let token = appState.token,
               let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/answer")
         else {
-            await MainActor.run { appState.inActiveCall = false }
+            await MainActor.run {
+                appState.inActiveCall = false
+                isProcessing = false
+            }
             return
         }
 
@@ -212,29 +220,39 @@ struct IncomingCallView: View {
                 await MainActor.run {
                     appState.inActiveCall = false
                     appState.incomingCall = nil
+                    isProcessing = false
                 }
                 return
             }
 
             await MainActor.run {
                 agoraManager.setup(appId: agoraAppId)
-                
+
                 try? AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .videoChat, options: [.allowBluetooth, .defaultToSpeaker])
                     try? AVAudioSession.sharedInstance().setActive(true)
-                
+
                 agoraManager.joinChannel(token: receivedToken, channelName: channelName)
                 withAnimation { isConnected = true }
             }
         } catch {
-            await MainActor.run { appState.inActiveCall = false }
+            await MainActor.run {
+                appState.inActiveCall = false
+                isProcessing = false
+            }
         }
     }
 
     // MARK: - Decline
     private func declineCall() async {
+        guard !isProcessing else { return }
+        isProcessing = true
         VoIPManager.shared.reportCallEnded()  // ← tambah ini
-        guard let token = appState.token else { return }
-        guard let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/decline") else { return }
+        guard let token = appState.token,
+              let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/decline")
+        else {
+            isProcessing = false
+            return
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

@@ -196,9 +196,18 @@ struct ReminderListView: View {
         await MainActor.run { isLoading = true }
         do {
             let decoded = try await ReminderRepository.fetchReminders(elderId: elderId, token: token)
-            await MainActor.run { reminders = decoded; isLoading = false }
+            await MainActor.run {
+                // Discard if the user already switched to a different elder while this was in flight —
+                // otherwise a slow response can overwrite the list with the wrong elder's reminders.
+                guard elderId == selectedElderId else { return }
+                reminders = decoded
+                isLoading = false
+            }
         } catch {
-            await MainActor.run { isLoading = false }
+            await MainActor.run {
+                guard elderId == selectedElderId else { return }
+                isLoading = false
+            }
         }
     }
 }

@@ -195,6 +195,12 @@ struct Onboarding: View {
 
     // MARK: - Check Existing User (Otomatis)
     private func checkExistingUser() async {
+        // User explicitly logged out — don't silently sign back in via device ID.
+        if UserDefaults.standard.bool(forKey: "user_logged_out") {
+            await MainActor.run { isCheckingUser = false }
+            return
+        }
+
         guard let url = URL(string: "\(AppConfig.baseURL)/auth/check-user") else { return }
         
         var request = URLRequest(url: url)
@@ -222,15 +228,15 @@ struct Onboarding: View {
                        let userRole = userDict["role"] as? String {
                         
                         let user = CurrentUser(id: userId, name: userName, role: userRole, avatar: userDict["avatar"] as? String)
-                        
+
                         await MainActor.run {
                             appState.saveSession(token: token, user: user)
                             isCheckingUser = false
-                            
+
                             let isProfileComplete = !(userName.isEmpty) && !(userDict["avatar"] as? String ?? "").isEmpty
-                            
+
                             if isProfileComplete {
-                                if userRole == "elder" {
+                                if userRole.lowercased() == "elder" {
                                     navigateToElder = true
                                 } else {
                                     navigateToChild = true
@@ -239,13 +245,22 @@ struct Onboarding: View {
                                 navigateToSetupProfile = true
                             }
                         }
+                    } else {
+                        // exists == true tapi payload tidak lengkap — jangan macet di loading
+                        await MainActor.run {
+                            isCheckingUser = false
+                            errorMessage = "Gagal membaca data user. Coba lagi."
+                        }
                     }
                 } else {
                     // Jika belum ada, hilangkan loading dan munculkan tombol
                     await MainActor.run { isCheckingUser = false }
                 }
             } else {
-                await MainActor.run { isCheckingUser = false }
+                await MainActor.run {
+                    isCheckingUser = false
+                    errorMessage = "Gagal terhubung saat mengecek user."
+                }
             }
         } catch {
             await MainActor.run {

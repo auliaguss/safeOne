@@ -36,7 +36,7 @@ class AppState: ObservableObject {
         Reminder(
             title: "Vitamin D",
             notes: "1 Tablet",
-            date: Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date())!,
+            date: Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date(),
             repeatOption: .everyday,
             earlyReminder: .inTime,
             category: .medication,
@@ -49,7 +49,7 @@ class AppState: ObservableObject {
         Reminder(
             title: "Doctor Appointment",
             notes: "",
-            date: Calendar.current.date(bySettingHour: 14, minute: 0, second: 0, of: Date())!,
+            date: Calendar.current.date(bySettingHour: 14, minute: 0, second: 0, of: Date()) ?? Date(),
             repeatOption: .none,
             earlyReminder: .none,
             category: .appointment,
@@ -62,7 +62,7 @@ class AppState: ObservableObject {
         Reminder(
             title: "Antibiotics",
             notes: "",
-            date: Calendar.current.date(bySettingHour: 9, minute: 5, second: 0, of: Date())!,
+            date: Calendar.current.date(bySettingHour: 9, minute: 5, second: 0, of: Date()) ?? Date(),
             repeatOption: .everyday,
             earlyReminder: .none,
             category: .medication,
@@ -75,7 +75,7 @@ class AppState: ObservableObject {
         Reminder(
             title: "Paracetamol",
             notes: "",
-            date: Calendar.current.date(bySettingHour: 9, minute: 6, second: 0, of: Date())!,
+            date: Calendar.current.date(bySettingHour: 9, minute: 6, second: 0, of: Date()) ?? Date(),
             repeatOption: .everyday,
             earlyReminder: .none,
             category: .medication,
@@ -156,6 +156,7 @@ class AppState: ObservableObject {
     func saveSession(token: String, user: CurrentUser) {
         self.token = token
         self.currentUser = user
+        UserDefaults.standard.removeObject(forKey: "user_logged_out")
         UserDefaults.standard.set(token, forKey: "jwt_token")
         if let encoded = try? JSONEncoder().encode(user) {
             UserDefaults.standard.set(encoded, forKey: "current_user")
@@ -176,6 +177,10 @@ class AppState: ObservableObject {
         self.stopPolling() // Matikan polling saat user logout
         UserDefaults.standard.removeObject(forKey: "jwt_token")
         UserDefaults.standard.removeObject(forKey: "current_user")
+        // /auth/check-user silently re-authenticates by device ID (identifierForVendor),
+        // which never changes — without this flag, Onboarding's auto-login on next
+        // appearance immediately signs back into the same account, making Log Out a no-op.
+        UserDefaults.standard.set(true, forKey: "user_logged_out")
     }
     
     var isLoggedIn: Bool {

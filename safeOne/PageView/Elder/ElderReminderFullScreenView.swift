@@ -25,8 +25,10 @@ final class SpeechHelper: ObservableObject {
         let utt = AVSpeechUtterance(string: text)
         utt.rate   = AVSpeechUtteranceDefaultSpeechRate * 0.85
         utt.volume = 1.0
-        // Use device locale; falls back to system default if unavailable
-        let langCode = Locale.current.identifier
+        // Use device locale; falls back to system default if unavailable.
+        // AVSpeechSynthesisVoice expects a BCP-47 tag ("id-ID"), not the
+        // underscore form Locale.identifier returns ("id_ID").
+        let langCode = Locale.current.identifier(.bcp47)
         if let voice = AVSpeechSynthesisVoice(language: langCode) {
             utt.voice = voice
         }
@@ -48,6 +50,7 @@ struct ElderReminderFullScreenView: View {
     @State private var successScale: CGFloat = 0.5
     @State private var fetchedImageName: String? = nil
     @State private var fetchedTimes: [String] = []
+    @State private var actionError: String? = nil
 
     private var displayTimes: [String] {
         if !fetchedTimes.isEmpty { return fetchedTimes }
@@ -230,6 +233,14 @@ struct ElderReminderFullScreenView: View {
 
             // Action buttons
             VStack(spacing: 14) {
+                if let err = actionError {
+                    Text(err)
+                        .font(.subheadline)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+
                 // Re-read button
                 Button {
                     speech.speak(reminder.title)
@@ -286,22 +297,39 @@ struct ElderReminderFullScreenView: View {
     private func markDone() async {
         guard !isActing else { return }
         isActing = true
+        actionError = nil
         speech.stop()
         // Show success immediately (optimistic)
         await MainActor.run {
             successScale = 0.5
             showSuccess = true
         }
-        _ = try? await ReminderRepository.markDone(id: reminder.id, token: appState.authToken)
-        try? await Task.sleep(nanoseconds: 1_500_000_000)
-        await MainActor.run { appState.activeReminderAlert = nil }
+        let result = try? await ReminderRepository.markDone(id: reminder.id, token: appState.authToken)
+        if result != nil {
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            await MainActor.run { appState.activeReminderAlert = nil }
+        } else {
+            await MainActor.run {
+                showSuccess = false
+                isActing = false
+                actionError = "Couldn't mark as done. Please try again."
+            }
+        }
     }
 
     private func snooze() async {
         guard !isActing else { return }
         isActing = true
+        actionError = nil
         speech.stop()
-        try? await ReminderRepository.snoozeReminder(id: reminder.id, token: appState.authToken)
-        await MainActor.run { appState.activeReminderAlert = nil }
+        let result = try? await ReminderRepository.snoozeReminder(id: reminder.id, token: appState.authToken)
+        if result != nil {
+            await MainActor.run { appState.activeReminderAlert = nil }
+        } else {
+            await MainActor.run {
+                isActing = false
+                actionError = "Couldn't snooze. Please try again."
+            }
+        }
     }
 }

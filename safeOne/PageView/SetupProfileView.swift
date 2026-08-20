@@ -10,7 +10,8 @@ import SwiftUI
 
 struct SetupProfileView: View {
     @EnvironmentObject var appState: AppState
-    
+    @Environment(\.dismiss) var dismiss
+
     @State private var name: String = ""
     @State private var selectedAvatar: String = "😊"
     @State private var isSaving = false
@@ -42,7 +43,7 @@ struct SetupProfileView: View {
                 VStack(spacing: 0) {
                     // Back button
                     HStack {
-                        Button(action: { /* dismiss jika perlu */ }) {
+                        Button(action: { dismiss() }) {
                             Image(systemName: "chevron.left")
                                 .font(.title3)
                                 .foregroundColor(.primary)
@@ -203,7 +204,7 @@ struct SetupProfileView: View {
                     }
                 }
                 isSaving = false
-                if appState.currentUser?.role == "elder" {
+                if appState.currentUser?.role.lowercased() == "elder" {
                     navigateToElder = true
                 } else {
                     navigateToChild = true

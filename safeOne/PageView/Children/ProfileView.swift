@@ -77,6 +77,14 @@ struct ProfileView: View {
                     }
                 }
 
+                Section {
+                    Button(role: .destructive) {
+                        appState.clearSession()
+                        goToOnboarding = true
+                    } label: {
+                        Text("Log Out")
+                    }
+                }
 
             }
             .scrollContentBackground(.hidden)
@@ -234,6 +242,7 @@ struct ElderListView: View {
     @State private var showAddElder = false
     @State private var otpCode = ""
     @State private var errorMessage: String? = nil
+    @State private var showOtpError = false
 
     var body: some View {
         List {
@@ -267,9 +276,10 @@ struct ElderListView: View {
                     .padding(.vertical, 4)
                 }
                 .onDelete { indexSet in
+                    let ids = indexSet.map { elders[$0].id }
                     Task {
-                        for index in indexSet {
-                            await removeElder(elders[index].id)
+                        for id in ids {
+                            await removeElder(id)
                         }
                     }
                 }
@@ -278,7 +288,10 @@ struct ElderListView: View {
         .navigationTitle("Elder Lists")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { showAddElder = true }) {
+                Button(action: {
+                    errorMessage = nil
+                    showAddElder = true
+                }) {
                     Image(systemName: "plus")
                 }
             }
@@ -295,7 +308,12 @@ struct ElderListView: View {
                 errorMessage = nil
             }
         } message: {
-            Text(errorMessage ?? "Enter the OTP code from the elder's device.")
+            Text("Enter the OTP code from the elder's device.")
+        }
+        .alert("Couldn't Add Elder", isPresented: $showOtpError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "Invalid OTP code")
         }
         .task { await fetchElders() }
     }
@@ -362,6 +380,7 @@ struct ElderListView: View {
                 await MainActor.run {
                     errorMessage = msg
                     otpCode = ""
+                    showOtpError = true
                 }
             }
         }

@@ -59,11 +59,13 @@ struct APIReminder: Codable, Identifiable {
         return withMs.date(from: string) ?? ISO8601DateFormatter().date(from: string)
     }
 
-    /// Handles DATE-only "yyyy-MM-dd" strings returned from the end_date column
+    /// Handles DATE-only "yyyy-MM-dd" strings returned from the end_date column.
+    /// Parsed in the local timezone to match how AddReminderView encodes it (DateFormatter
+    /// with the default .current timezone) — parsing as UTC here would shift the day by one
+    /// for timezones on either side of GMT when compared against local "today".
     static func parseEndDate(_ string: String) -> Date? {
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
-        df.timeZone = TimeZone(secondsFromGMT: 0)
         return df.date(from: string) ?? parseDate(string)
     }
 

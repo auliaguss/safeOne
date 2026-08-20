@@ -21,6 +21,10 @@ struct safeOneApp: App {
     init() {
         _ = VoIPManager.shared
         NotificationManager.shared.setup()
+        // Wire this synchronously (not in .onAppear) — a VoIP push can wake the app
+        // and reach VoIPManager's PushKit/CallKit callbacks before SwiftUI has ever
+        // rendered a view, so appState must already be set by the time that happens.
+        VoIPManager.shared.appState = appState
     }
     
     var body: some Scene {

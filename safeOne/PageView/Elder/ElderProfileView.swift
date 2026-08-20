@@ -124,6 +124,14 @@ struct ElderProfileView: View {
                     }
                 }
 
+                Section {
+                    Button(role: .destructive) {
+                        appState.clearSession()
+                        goToOnboarding = true
+                    } label: {
+                        Text("Log Out")
+                    }
+                }
 
             }
             .scrollContentBackground(.hidden)
