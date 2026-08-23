@@ -89,6 +89,7 @@ struct safeOneApp: App {
             // Memberikan animasi halus saat layar panggilan masuk/keluar
             .animation(.easeInOut, value: appState.incomingCall != nil)
             .animation(.easeInOut, value: tutorialManager.isActive)
+            .environment(\.locale, Locale(identifier: appState.language.localeIdentifier))
             .onPreferenceChange(TutorialAnchorPreferenceKey.self) { anchors in
                 tutorialManager.anchors = anchors
             }

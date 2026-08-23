@@ -49,7 +49,7 @@ struct ElderSelectorView: View {
 // MARK: - Section Header
 
 struct SectionHeader: View {
-    let title: String
+    let title: LocalizedStringKey
 
     var body: some View {
         HStack {
@@ -67,7 +67,7 @@ struct SectionHeader: View {
 // MARK: - Form Row Display (read-only)
 
 struct FormRowDisplay: View {
-    let label: String
+    let label: LocalizedStringKey
     let value: String
 
     var body: some View {

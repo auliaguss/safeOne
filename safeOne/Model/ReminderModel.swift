@@ -20,6 +20,7 @@ struct CompletionLog: Codable, Identifiable {
             return completedAt
         }
         let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: AppLanguage.current.localeIdentifier)
         fmt.dateFormat = "d MMM yyyy, HH:mm"
         return fmt.string(from: d)
     }
@@ -112,7 +113,8 @@ struct APIReminder: Codable, Identifiable {
         if let edStr = endDate, !edStr.isEmpty, let ed = Self.parseEndDate(edStr) {
             let dateFmt = DateFormatter()
             dateFmt.dateFormat = "d MMM"
-            return "Until \(dateFmt.string(from: ed)), \(timesText)"
+            dateFmt.locale = Locale(identifier: AppLanguage.current.localeIdentifier)
+            return AppLanguage.localized("Hingga \(dateFmt.string(from: ed)), \(timesText)", "Until \(dateFmt.string(from: ed)), \(timesText)")
         }
         // Everyday repeat (legacy) → "Everyday, 09.00"
         if repeatOption == "everyday" || repeatOption.hasPrefix("days:") {
@@ -121,20 +123,23 @@ struct APIReminder: Codable, Identifiable {
         // Single date → "26 May, 14.00"
         guard let d = Self.parseDate(date) else { return timesText }
         let dateFmt = DateFormatter()
+        dateFmt.locale = Locale(identifier: AppLanguage.current.localeIdentifier)
         dateFmt.dateFormat = "d MMM"
         return "\(dateFmt.string(from: d)), \(timesText)"
     }
 
     var repeatDisplayName: String {
         switch repeatOption.lowercased() {
-        case "none":     return "Never"
-        case "everyday": return "Everyday"
-        case "weekly":   return "Weekly"
-        case "monthly":  return "Monthly"
+        case "none":     return AppLanguage.localized("Tidak pernah", "Never")
+        case "everyday": return AppLanguage.localized("Setiap hari", "Everyday")
+        case "weekly":   return AppLanguage.localized("Mingguan", "Weekly")
+        case "monthly":  return AppLanguage.localized("Bulanan", "Monthly")
         default:
             if repeatOption.hasPrefix("days:") {
                 let nums = repeatOption.dropFirst(5).split(separator: ",").compactMap { Int($0) }
-                let names = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+                let names = AppLanguage.current == .indonesian
+                    ? ["Min","Sen","Sel","Rab","Kam","Jum","Sab"]
+                    : ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
                 let labels = nums.sorted().compactMap { (0...6).contains($0) ? names[$0] : nil }
                 return labels.joined(separator: ", ")
             }
@@ -145,11 +150,32 @@ struct APIReminder: Codable, Identifiable {
     var statusText: String {
         guard let d = Self.parseDate(date) else { return "" }
         let now = Date()
-        if d < now { return "Past" }
+        if d < now { return AppLanguage.localized("Lewat", "Past") }
         let mins = Int(d.timeIntervalSince(now) / 60)
-        if mins < 60 { return "in \(mins) min\(mins == 1 ? "" : "s")" }
+        if mins < 60 { return AppLanguage.localized("dalam \(mins) menit", "in \(mins) min\(mins == 1 ? "" : "s")") }
         let hours = mins / 60
-        return "in \(hours) hour\(hours == 1 ? "" : "s")"
+        return AppLanguage.localized("dalam \(hours) jam", "in \(hours) hour\(hours == 1 ? "" : "s")")
+    }
+
+    var localizedCategory: String {
+        switch category?.lowercased() {
+        case "medication": return AppLanguage.localized("Obat", "Medication")
+        case "appointment": return AppLanguage.localized("Janji temu", "Appointment")
+        case "exercise": return AppLanguage.localized("Olahraga", "Exercise")
+        case "reminders": return AppLanguage.localized("Pengingat", "Reminders")
+        case "none", nil, "": return AppLanguage.localized("Tidak ada", "None")
+        default: return category?.capitalized ?? ""
+        }
+    }
+
+    var localizedEarlyReminder: String {
+        switch earlyReminder?.lowercased() {
+        case "in_time", nil, "none": return AppLanguage.localized("Tepat waktu", "On time")
+        case "5_minutes_before": return AppLanguage.localized("5 menit sebelumnya", "5 minutes before")
+        case "10_minutes_before": return AppLanguage.localized("10 menit sebelumnya", "10 minutes before")
+        case "30_minutes_before": return AppLanguage.localized("30 menit sebelumnya", "30 minutes before")
+        default: return earlyReminder?.replacingOccurrences(of: "_", with: " ").capitalized ?? ""
+        }
     }
 
     enum CodingKeys: String, CodingKey {

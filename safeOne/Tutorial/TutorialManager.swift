@@ -9,18 +9,18 @@ import Combine
 struct TutorialStep: Identifiable {
     let id: String
     let anchorID: String
-    let title: String
-    let description: String
-    let buttonTitle: String
+    let title: LocalizedStringKey
+    let description: LocalizedStringKey
+    let buttonTitle: LocalizedStringKey
     /// Side effect to run when this step becomes current — e.g. switching tabs
     /// so the real target it needs to highlight is actually on screen.
     let onActivate: ((AppState) -> Void)?
 
     init(
         anchorID: String,
-        title: String,
-        description: String,
-        buttonTitle: String,
+        title: LocalizedStringKey,
+        description: LocalizedStringKey,
+        buttonTitle: LocalizedStringKey,
         onActivate: ((AppState) -> Void)? = nil
     ) {
         self.id = anchorID

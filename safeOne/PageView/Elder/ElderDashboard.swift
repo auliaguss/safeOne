@@ -27,6 +27,7 @@ struct ElderDashboard: View {
 
     private var formattedToday: String {
         let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: appState.language.localeIdentifier)
         fmt.dateFormat = "EEE, d MMM yyyy"
         return fmt.string(from: Date())
     }
@@ -167,9 +168,10 @@ struct ElderDashboard: View {
             Text("You're all caught up!")
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundColor(.black)
-            Text(doneToday.isEmpty
-                 ? "No reminders today, enjoy your day."
-                 : "All reminders for today are done.")
+            Text(appState.text(
+                doneToday.isEmpty ? "Tidak ada pengingat hari ini, nikmati hari Anda." : "Semua pengingat hari ini telah selesai.",
+                doneToday.isEmpty ? "No reminders today, enjoy your day." : "All reminders for today are done."
+            ))
                 .font(.system(size: 16, design: .rounded))
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
@@ -181,7 +183,7 @@ struct ElderDashboard: View {
     // MARK: - Section builder
 
     @ViewBuilder private func reminderSection(
-        _ title: String,
+        _ title: LocalizedStringKey,
         items: [APIReminder],
         tappable: Bool,
         completed: Bool
@@ -207,6 +209,7 @@ struct ElderDashboard: View {
 // MARK: - Elder Reminder Card
 
 struct ElderReminderCard: View {
+    @EnvironmentObject var appState: AppState
     let reminder: APIReminder
     var isCompleted: Bool = false
     var onTap: (() -> Void)? = nil
@@ -236,9 +239,9 @@ struct ElderReminderCard: View {
 
     private func formatIncoming(_ interval: TimeInterval) -> String {
         let mins = Int(interval / 60)
-        if mins < 60 { return "in \(mins) min\(mins == 1 ? "" : "s")" }
+        if mins < 60 { return appState.text("dalam \(mins) menit", "in \(mins) min\(mins == 1 ? "" : "s")") }
         let hours = mins / 60
-        return "in \(hours) hour\(hours == 1 ? "" : "s")"
+        return appState.text("dalam \(hours) jam", "in \(hours) hour\(hours == 1 ? "" : "s")")
     }
 
     var body: some View {
@@ -265,7 +268,7 @@ struct ElderReminderCard: View {
                         Text(reminder.timesText).font(.system(size: 15, design: .rounded))
                         if let cat = reminder.category, cat.lowercased() != "none", !cat.isEmpty {
                             Text("·")
-                            Text(cat.capitalized).font(.system(size: 15, design: .rounded))
+                            Text(reminder.localizedCategory).font(.system(size: 15, design: .rounded))
                         }
                     }
                     .foregroundColor(isCompleted ? .secondary : .gray)
@@ -278,7 +281,7 @@ struct ElderReminderCard: View {
                     }
 
                     if isCompleted && reminder.repeatOption != "none" {
-                        Text("Repeats \(reminder.repeatOption.lowercased())")
+                        Text(appState.text("Berulang \(reminder.repeatDisplayName.lowercased())", "Repeats \(reminder.repeatDisplayName.lowercased())"))
                             .font(.system(size: 13, design: .rounded))
                             .foregroundColor(Color(hex: "007AFF").opacity(0.85))
                     }
@@ -307,7 +310,7 @@ struct ElderReminderCard: View {
         .buttonStyle(.plain)
         .opacity(isCompleted ? 0.82 : 1.0)
         .disabled(onTap == nil)
-        .accessibilityHint(onTap != nil ? "Tap to see details and mark as done" : "")
+        .accessibilityHint(onTap != nil ? appState.text("Ketuk untuk melihat detail dan menandai selesai", "Tap to see details and mark as done") : "")
     }
 }
 

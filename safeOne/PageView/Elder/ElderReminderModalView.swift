@@ -82,7 +82,7 @@ struct ElderReminderModalView: View {
         }
         .onAppear {
             isDone = reminder.isCompleted
-            speech.speak(reminder.title)
+            speech.speak(reminder.title, languageIdentifier: appState.language.localeIdentifier)
         }
         .onDisappear { speech.stop() }
     }
@@ -140,7 +140,7 @@ struct ElderReminderModalView: View {
                     }
 
                     if let cat = reminder.category, cat.lowercased() != "none", !cat.isEmpty {
-                        Text(cat.capitalized)
+                        Text(reminder.localizedCategory)
                             .font(.system(size: 16, design: .rounded))
                             .foregroundColor(.gray)
                     }
@@ -184,7 +184,7 @@ struct ElderReminderModalView: View {
                     }
 
                     Button {
-                        speech.speak(reminder.title)
+                        speech.speak(reminder.title, languageIdentifier: appState.language.localeIdentifier)
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "speaker.wave.2.fill")
@@ -212,7 +212,10 @@ struct ElderReminderModalView: View {
                     .disabled(isActing || isDone || reminder.isCompleted)
 
                     Button(action: { Task { await markDone() } }) {
-                        Text(isDone || reminder.isCompleted ? "Already Done ✓" : "Mark as Done")
+                        Text(appState.text(
+                            isDone || reminder.isCompleted ? "Sudah Selesai ✓" : "Tandai Selesai",
+                            isDone || reminder.isCompleted ? "Already Done ✓" : "Mark as Done"
+                        ))
                             .font(.system(.headline, design: .rounded))
                             .fontWeight(.bold)
                             .foregroundColor(.white)

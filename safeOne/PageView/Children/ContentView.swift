@@ -13,13 +13,13 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $appState.childTabSelection) {
-            Tab("Dashboard", systemImage: "checklist", value: ChildTab.dashboard) {
+            Tab(appState.text("Beranda", "Dashboard"), systemImage: "checklist", value: ChildTab.dashboard) {
                 DashboardView()
             }
-            Tab("Reminder", systemImage: "bell", value: ChildTab.reminders) {
+            Tab(appState.text("Pengingat", "Reminder"), systemImage: "bell", value: ChildTab.reminders) {
                 ReminderListView()
             }
-            Tab("Profile", systemImage: "person", value: ChildTab.profile) {
+            Tab(appState.text("Profil", "Profile"), systemImage: "person", value: ChildTab.profile) {
                 ProfileView()
             }
         }

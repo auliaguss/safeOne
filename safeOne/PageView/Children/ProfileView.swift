@@ -32,9 +32,9 @@ struct ProfileView: View {
                             }
                         }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(appState.currentUser?.name ?? "Caregiver")
+                            Text(appState.currentUser?.name ?? appState.text("Pendamping", "Caregiver"))
                                 .font(.headline)
-                            Text("Children")
+                            Text(appState.text("Keluarga", "Family"))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -49,8 +49,8 @@ struct ProfileView: View {
                 }
 
                 // Account
-                Section("Account") {
-                    NavigationLink("Elder Lists") {
+                Section(appState.text("Akun", "Account")) {
+                    NavigationLink(appState.text("Daftar Lansia", "Elder Lists")) {
                         ElderListView()
                             .environmentObject(appState)
                     }
@@ -71,9 +71,24 @@ struct ProfileView: View {
                 //     }
                 // }
 
+                Section(appState.text("Bahasa", "Language")) {
+                    Picker(selection: Binding(
+                        get: { appState.language },
+                        set: { appState.setLanguage($0) }
+                    )) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(language.displayName).tag(language)
+                        }
+                    } label: {
+                        Label(appState.text("Bahasa aplikasi", "App language"), systemImage: "globe")
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityHint(appState.text("Pilih Bahasa Indonesia atau English", "Choose Bahasa Indonesia or English"))
+                }
+
                 // General
-                Section("General") {
-                    NavigationLink("Data & Privacy") {
+                Section(appState.text("Umum", "General")) {
+                    NavigationLink(appState.text("Data & Privasi", "Data & Privacy")) {
                         DataPrivacyView()
                     }
                 }
@@ -102,7 +117,7 @@ struct ProfileView: View {
             .navigationDestination(isPresented: $goToOnboarding) {
                 Onboarding()
             }
-            .navigationTitle("Profile")
+            .navigationTitle(appState.text("Profil", "Profile"))
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showEditProfile) {
                 EditProfileView()
@@ -127,14 +142,14 @@ struct EditProfileView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("User ID") {
+                Section(appState.text("ID Pengguna", "User ID")) {
                     Text(appState.currentUser?.id ?? "-")
                         .font(.system(.caption, design: .monospaced))
                         .foregroundColor(.secondary)
                         .textSelection(.enabled)
                 }
 
-                Section("Avatar") {
+                Section(appState.text("Avatar", "Avatar")) {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
                         ForEach(avatarOptions, id: \.self) { emoji in
                             Text(emoji)
@@ -149,8 +164,8 @@ struct EditProfileView: View {
                     .padding(.vertical, 8)
                 }
 
-                Section("Name") {
-                    TextField("Enter your name", text: $name)
+                Section(appState.text("Nama", "Name")) {
+                    TextField(appState.text("Masukkan nama Anda", "Enter your name"), text: $name)
                 }
 
                 if let error = errorMessage {
@@ -159,17 +174,17 @@ struct EditProfileView: View {
                     }
                 }
             }
-            .navigationTitle("Edit Profile")
+            .navigationTitle(appState.text("Ubah Profil", "Edit Profile"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button(appState.text("Batal", "Cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         Task { await saveProfile() }
                     } label: {
-                        if isSaving { ProgressView() } else { Text("Save").bold() }
+                        if isSaving { ProgressView() } else { Text(appState.text("Simpan", "Save")).bold() }
                     }
                     .disabled(isSaving || name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
@@ -201,7 +216,7 @@ struct EditProfileView: View {
             guard let http = response as? HTTPURLResponse, http.statusCode == 200,
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
             else {
-                await MainActor.run { errorMessage = "Failed to save. Try again."; isSaving = false }
+                await MainActor.run { errorMessage = self.appState.text("Gagal menyimpan. Coba lagi.", "Failed to save. Try again."); isSaving = false }
                 return
             }
 
@@ -222,7 +237,7 @@ struct EditProfileView: View {
                 dismiss()
             }
         } catch {
-            await MainActor.run { errorMessage = "Network error. Try again."; isSaving = false }
+            await MainActor.run { errorMessage = self.appState.text("Kesalahan jaringan. Coba lagi.", "Network error. Try again."); isSaving = false }
         }
     }
 }
@@ -241,7 +256,7 @@ struct ElderListView: View {
             if isLoading {
                 HStack { Spacer(); ProgressView(); Spacer() }
             } else if elders.isEmpty {
-                Text("No elders connected yet")
+                Text(appState.text("Belum ada lansia yang terhubung", "No elders connected yet"))
                     .foregroundColor(.secondary)
                     .padding(.vertical, 8)
             } else {
@@ -261,7 +276,7 @@ struct ElderListView: View {
                         }
                         VStack(alignment: .leading, spacing: 2) {
                             Text(elder.name).font(.body).fontWeight(.medium)
-                            Text("Elder").font(.caption).foregroundColor(.secondary)
+                            Text(appState.text("Lansia", "Elder")).font(.caption).foregroundColor(.secondary)
                         }
                         Spacer()
                     }
@@ -276,7 +291,7 @@ struct ElderListView: View {
                 }
             }
         }
-        .navigationTitle("Elder Lists")
+        .navigationTitle(appState.text("Daftar Lansia", "Elder Lists"))
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { showAddElder = true }) {
@@ -287,16 +302,16 @@ struct ElderListView: View {
                 EditButton()
             }
         }
-        .alert("Add Elder via OTP", isPresented: $showAddElder) {
-            TextField("Enter OTP Code", text: $otpCode)
+        .alert(appState.text("Tambah Lansia dengan OTP", "Add Elder via OTP"), isPresented: $showAddElder) {
+            TextField(appState.text("Masukkan Kode OTP", "Enter OTP Code"), text: $otpCode)
                 .keyboardType(.numberPad)
-            Button("Add") { Task { await verifyOtp() } }
-            Button("Cancel", role: .cancel) {
+            Button(appState.text("Tambah", "Add")) { Task { await verifyOtp() } }
+            Button(appState.text("Batal", "Cancel"), role: .cancel) {
                 otpCode = ""
                 errorMessage = nil
             }
         } message: {
-            Text(errorMessage ?? "Enter the OTP code from the elder's device.")
+            Text(errorMessage ?? appState.text("Masukkan kode OTP dari perangkat lansia.", "Enter the OTP code from the elder's device."))
         }
         .task { await fetchElders() }
     }
@@ -359,7 +374,7 @@ struct ElderListView: View {
                 await fetchElders()
             } else {
                 let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-                let msg = json?["error"] as? String ?? "Invalid OTP code"
+                let msg = json?["error"] as? String ?? appState.text("Kode OTP tidak valid", "Invalid OTP code")
                 await MainActor.run {
                     errorMessage = msg
                     otpCode = ""

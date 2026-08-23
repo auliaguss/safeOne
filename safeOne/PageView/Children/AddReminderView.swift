@@ -152,7 +152,10 @@ struct AddReminderView: View {
                             .padding(.horizontal)
                         }
 
-                        Text(usePhoto ? "Photo from gallery" : "Choose emoji or photo")
+                        Text(appState.text(
+                            usePhoto ? "Foto dari galeri" : "Pilih emoji atau foto",
+                            usePhoto ? "Photo from gallery" : "Choose emoji or photo"
+                        ))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -237,14 +240,18 @@ struct AddReminderView: View {
                                 Text("End Date")
                                     .foregroundColor(.primary)
                                 Spacer()
-                                Text(hasEndDate
-                                    ? endDate.formatted(.dateTime.day().month(.wide).year())
-                                    : "None")
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color(.systemGray5))
-                                    .cornerRadius(20)
+                                Group {
+                                    if hasEndDate {
+                                        Text(endDate.formatted(.dateTime.day().month(.wide).year()))
+                                    } else {
+                                        Text("None")
+                                    }
+                                }
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color(.systemGray5))
+                                .cornerRadius(20)
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 14)
@@ -344,7 +351,7 @@ struct AddReminderView: View {
                 Button("Delete", role: .destructive) { Task { await deleteReminder() } }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Are you sure you want to delete \"\(editingReminder?.title ?? "this reminder")\"?")
+                Text(appState.text("Yakin ingin menghapus \"\(editingReminder?.title ?? "pengingat ini")\"?", "Are you sure you want to delete \"\(editingReminder?.title ?? "this reminder")\"?"))
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -353,7 +360,7 @@ struct AddReminderView: View {
                     }
                 }
                 ToolbarItem(placement: .principal) {
-                    Text(isEditing ? "Edit Reminder" : "Add Reminder").font(.headline)
+                    Text(appState.text(isEditing ? "Ubah Pengingat" : "Tambah Pengingat", isEditing ? "Edit Reminder" : "Add Reminder")).font(.headline)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { Task { await saveReminder() } }) {
@@ -395,6 +402,7 @@ struct AddReminderView: View {
     }
 
     private func ordinalLabel(_ n: Int) -> String {
+        if appState.language == .indonesian { return "\(n)" }
         let suffix: String
         if (11...13).contains(n % 100) { suffix = "th" }
         else {
@@ -510,11 +518,11 @@ struct AddReminderView: View {
     // MARK: - Save (Create or Update)
     private func saveReminder() async {
         guard let token = appState.token else {
-            errorMessage = "Sesi tidak valid, silakan login ulang."
+            errorMessage = appState.text("Sesi tidak valid, silakan login ulang.", "Your session is invalid. Please sign in again.")
             return
         }
         guard let targetElderId = selectedElderId else {
-            errorMessage = "Please select an elder first"
+            errorMessage = appState.text("Pilih lansia terlebih dahulu", "Please select an elder first")
             return
         }
 
@@ -571,7 +579,7 @@ struct AddReminderView: View {
         } catch {
             await MainActor.run {
                 isSaving = false
-                errorMessage = "Gagal: \(error.localizedDescription)"
+                errorMessage = appState.text("Gagal: \(error.localizedDescription)", "Failed: \(error.localizedDescription)")
             }
         }
     }

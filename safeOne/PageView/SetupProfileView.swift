@@ -183,7 +183,7 @@ struct SetupProfileView: View {
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
             else {
                 await MainActor.run {
-                    errorMessage = "Gagal menyimpan. Coba lagi."
+                    errorMessage = appState.text("Gagal menyimpan. Coba lagi.", "Failed to save. Try again.")
                     isSaving = false
                 }
                 return
@@ -211,7 +211,7 @@ struct SetupProfileView: View {
             }
         } catch {
             await MainActor.run {
-                errorMessage = "Gagal terhubung ke server."
+                errorMessage = appState.text("Gagal terhubung ke server.", "Unable to connect to the server.")
                 isSaving = false
             }
         }

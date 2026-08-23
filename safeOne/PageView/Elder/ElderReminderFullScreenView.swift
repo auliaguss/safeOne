@@ -13,7 +13,7 @@ final class SpeechHelper: ObservableObject {
     let objectWillChange = PassthroughSubject<Void, Never>()
     private let synth = AVSpeechSynthesizer()
 
-    func speak(_ text: String) {
+    func speak(_ text: String, languageIdentifier: String) {
         synth.stopSpeaking(at: .immediate)
 
         #if os(iOS)
@@ -25,9 +25,7 @@ final class SpeechHelper: ObservableObject {
         let utt = AVSpeechUtterance(string: text)
         utt.rate   = AVSpeechUtteranceDefaultSpeechRate * 0.85
         utt.volume = 1.0
-        // Use device locale; falls back to system default if unavailable
-        let langCode = Locale.current.identifier
-        if let voice = AVSpeechSynthesisVoice(language: langCode) {
+        if let voice = AVSpeechSynthesisVoice(language: languageIdentifier) {
             utt.voice = voice
         }
         synth.speak(utt)
@@ -114,7 +112,7 @@ struct ElderReminderFullScreenView: View {
             if showSuccess { successView } else { mainContent }
         }
         .onAppear {
-            speech.speak(reminder.title)
+            speech.speak(reminder.title, languageIdentifier: appState.language.localeIdentifier)
             Task {
                 if let fetched = try? await ReminderRepository.fetchReminder(id: reminder.id, token: appState.authToken) {
                     await MainActor.run {
@@ -195,7 +193,7 @@ struct ElderReminderFullScreenView: View {
                 }
 
                 if let cat = reminder.category, !cat.isEmpty, cat.lowercased() != "none" {
-                    Text(cat.capitalized)
+                    Text(reminder.localizedCategory)
                         .font(.system(size: 17, design: .rounded))
                         .foregroundColor(.gray)
                 }
@@ -232,7 +230,7 @@ struct ElderReminderFullScreenView: View {
             VStack(spacing: 14) {
                 // Re-read button
                 Button {
-                    speech.speak(reminder.title)
+                    speech.speak(reminder.title, languageIdentifier: appState.language.localeIdentifier)
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "speaker.wave.2.fill")

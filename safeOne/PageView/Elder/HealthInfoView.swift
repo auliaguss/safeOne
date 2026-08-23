@@ -26,8 +26,9 @@ struct HealthInfoView: View {
     private let bloodTypeOptions = ["A", "B", "AB", "O", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
 
     private var dobLabel: String {
-        guard hasDOB else { return "Not set" }
+        guard hasDOB else { return appState.text("Belum diatur", "Not set") }
         let f = DateFormatter()
+        f.locale = Locale(identifier: appState.language.localeIdentifier)
         f.dateFormat = "d MMMM yyyy"
         return f.string(from: dateOfBirth)
     }
@@ -100,7 +101,7 @@ struct HealthInfoView: View {
                         ZStack {
                             if isSaving { ProgressView().tint(.white) }
                             else {
-                                Text(mode == .onboarding ? "Continue" : "Save")
+                                Text(appState.text(mode == .onboarding ? "Lanjutkan" : "Simpan", mode == .onboarding ? "Continue" : "Save"))
                                     .font(.system(size: 17, weight: .semibold))
                                     .foregroundColor(.white)
                             }
@@ -213,7 +214,7 @@ struct HealthInfoView: View {
     // MARK: - Generic text field
 
     @ViewBuilder
-    private func fieldSection(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+    private func fieldSection(_ label: LocalizedStringKey, text: Binding<String>, placeholder: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label)
                 .font(.subheadline)

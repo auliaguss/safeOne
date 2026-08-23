@@ -15,11 +15,43 @@ enum ChildTab: Hashable {
     case dashboard, reminders, profile
 }
 
+enum AppLanguage: String, CaseIterable, Identifiable {
+    case indonesian = "id"
+    case english = "en"
+
+    var id: String { rawValue }
+
+    var localeIdentifier: String {
+        switch self {
+        case .indonesian: return "id_ID"
+        case .english: return "en_US"
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .indonesian: return "Bahasa Indonesia"
+        case .english: return "English"
+        }
+    }
+
+    static var current: AppLanguage {
+        AppLanguage(rawValue: UserDefaults.standard.string(forKey: "app_language") ?? "en") ?? .english
+    }
+
+    static func localized(_ indonesian: String, _ english: String) -> String {
+        current == .indonesian ? indonesian : english
+    }
+}
+
 class AppState: ObservableObject {
 
     // MARK: - Auth
     @Published var token: String? = nil
     @Published var currentUser: CurrentUser? = nil
+
+    // MARK: - Language
+    @Published private(set) var language: AppLanguage
 
     // MARK: - Tab selection (used by TutorialManager to surface a step's real target)
     @Published var elderTabSelection: ElderTab = .dashboard
@@ -109,6 +141,7 @@ class AppState: ObservableObject {
 
     // MARK: - Init (load token dari UserDefaults saat app launch)
     init() {
+        language = AppLanguage(rawValue: UserDefaults.standard.string(forKey: "app_language") ?? "en") ?? .english
         if let savedToken = UserDefaults.standard.string(forKey: "jwt_token") {
             self.token = savedToken
         }
@@ -201,6 +234,17 @@ class AppState: ObservableObject {
     var isChild: Bool {
         currentUser?.role == "child"
     }
+
+    /// Changes the interface language and remembers the choice for the next launch.
+    func setLanguage(_ language: AppLanguage) {
+        self.language = language
+        UserDefaults.standard.set(language.rawValue, forKey: "app_language")
+    }
+
+    /// Temporary lightweight localization helper while the app's screens are migrated.
+    func text(_ indonesian: String, _ english: String) -> String {
+        language == .indonesian ? indonesian : english
+    }
     
     /// Token yang sudah di-unwrap, fallback ke empty string
     var authToken: String {
@@ -291,6 +335,16 @@ struct ReminderNotificationData: Identifiable {
     let imageName: String?
     let time: String        // ISO-8601 date string from the backend
     let category: String?
+
+    var localizedCategory: String {
+        switch category?.lowercased() {
+        case "medication": return AppLanguage.localized("Obat", "Medication")
+        case "appointment": return AppLanguage.localized("Janji temu", "Appointment")
+        case "exercise": return AppLanguage.localized("Olahraga", "Exercise")
+        case "reminders": return AppLanguage.localized("Pengingat", "Reminders")
+        default: return category?.capitalized ?? ""
+        }
+    }
 }
 
 struct CurrentUser: Codable {

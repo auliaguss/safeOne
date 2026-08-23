@@ -360,6 +360,7 @@
 			knownRegions = (
 				en,
 				Base,
+				id,
 			);
 			mainGroup = 219E09042FBD7FC000118AB9;
 			minimizedProjectReferenceProxies = 1;
@@ -571,7 +572,7 @@
 				CODE_SIGN_ENTITLEMENTS = safeOne/safeOne.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = NTPW7765ND;
+				DEVELOPMENT_TEAM = V7RKC8F8WN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = safeOne/Info.plist;
@@ -611,7 +612,7 @@
 				CODE_SIGN_ENTITLEMENTS = safeOne/safeOne.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = NTPW7765ND;
+				DEVELOPMENT_TEAM = V7RKC8F8WN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = safeOne/Info.plist;

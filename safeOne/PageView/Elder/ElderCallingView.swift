@@ -223,7 +223,7 @@ struct ElderCallingView: View {
     // MARK: - Initiate Call
     private func initiateCallAPI() async {
         guard let token = appState.token else {
-            await MainActor.run { errorMessage = "Sesi tidak valid, silakan login ulang." }
+            await MainActor.run { errorMessage = appState.text("Sesi tidak valid, silakan login ulang.", "Your session is invalid. Please sign in again.") }
             return
         }
 
@@ -252,7 +252,7 @@ struct ElderCallingView: View {
                 await MainActor.run { self.errorMessage = errorMsg }
             }
         } catch {
-            await MainActor.run { self.errorMessage = "Gagal terhubung ke server." }
+            await MainActor.run { self.errorMessage = self.appState.text("Gagal terhubung ke server.", "Unable to connect to the server.") }
         }
     }
 

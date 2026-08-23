@@ -10,10 +10,10 @@ struct ElderContentView: View {
     
     var body: some View {
         TabView(selection: $appState.elderTabSelection) {
-            Tab("Dashboard", systemImage: "checklist", value: ElderTab.dashboard) {
+            Tab(appState.text("Beranda", "Dashboard"), systemImage: "checklist", value: ElderTab.dashboard) {
                 ElderDashboard()
             }
-            Tab("Profile", systemImage: "person", value: ElderTab.profile) {
+            Tab(appState.text("Profil", "Profile"), systemImage: "person", value: ElderTab.profile) {
                 ElderProfileView()
             }
         }

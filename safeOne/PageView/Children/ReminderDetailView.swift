@@ -22,6 +22,7 @@ struct ReminderDetailView: View {
     private var formattedDate: String {
         guard let d = reminderDate else { return "-" }
         let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: appState.language.localeIdentifier)
         fmt.dateFormat = "d MMMM yyyy"
         return fmt.string(from: d)
     }
@@ -61,7 +62,7 @@ struct ReminderDetailView: View {
 
                 HStack {
                     let notes = reminder.notes ?? ""
-                    Text(notes.isEmpty ? "No notes" : notes)
+                    Text(notes.isEmpty ? appState.text("Tidak ada catatan", "No notes") : notes)
                         .foregroundColor(notes.isEmpty ? .secondary : .primary)
                         .padding(.horizontal)
                         .padding(.vertical, 14)
@@ -80,9 +81,9 @@ struct ReminderDetailView: View {
                 SectionHeader(title: "Reminder")
                 FormRowDisplay(label: "Repeat", value: reminder.repeatDisplayName)
                 Divider().padding(.leading)
-                FormRowDisplay(label: "Early Reminder", value: (reminder.earlyReminder ?? "none").replacingOccurrences(of: "_", with: " ").capitalized)
+                FormRowDisplay(label: "Early Reminder", value: reminder.localizedEarlyReminder)
                 Divider().padding(.leading)
-                FormRowDisplay(label: "Category", value: (reminder.category ?? "none").capitalized)
+                FormRowDisplay(label: "Category", value: reminder.localizedCategory)
 
                 Divider().padding(.top, 8)
                 SectionHeader(title: "Progress")
@@ -93,7 +94,7 @@ struct ReminderDetailView: View {
                     )
                     .tint(.blue)
                     HStack {
-                        Text("\(reminder.completedCount) of \(reminder.totalCount) completed")
+                        Text(appState.text("\(reminder.completedCount) dari \(reminder.totalCount) selesai", "\(reminder.completedCount) of \(reminder.totalCount) completed"))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         Spacer()
@@ -157,7 +158,7 @@ struct ReminderDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Are you sure you want to delete \"\(reminder.title)\"?")
+            Text(appState.text("Yakin ingin menghapus \"\(reminder.title)\"?", "Are you sure you want to delete \"\(reminder.title)\"?"))
         }
     }
 

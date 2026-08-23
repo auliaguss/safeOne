@@ -38,9 +38,9 @@ struct ElderProfileView: View {
                             }
                         }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(appState.currentUser?.name ?? "Elder")
+                            Text(appState.currentUser?.name ?? appState.text("Lansia", "Elder"))
                                 .font(.headline)
-                            Text("Elder")
+                            Text(appState.text("Lansia", "Elder"))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -58,7 +58,7 @@ struct ElderProfileView: View {
                 Section {
                     if let code = otpCode, otpSecondsLeft > 0 {
                         VStack(spacing: 12) {
-                            Text("Share this code with your caregiver")
+                            Text(appState.text("Bagikan kode ini kepada pendamping Anda", "Share this code with your caregiver"))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             
@@ -70,7 +70,7 @@ struct ElderProfileView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "clock")
                                     .font(.caption)
-                                Text("Expires in \(otpSecondsLeft)s")
+                                Text(appState.text("Berlaku selama \(otpSecondsLeft) dtk", "Expires in \(otpSecondsLeft)s"))
                                     .font(.caption)
                             }
                             .foregroundColor(otpSecondsLeft < 60 ? .red : .secondary)
@@ -78,7 +78,7 @@ struct ElderProfileView: View {
                             Button {
                                 Task { await generateOtp() }
                             } label: {
-                                Label("Regenerate", systemImage: "arrow.clockwise")
+                                Label(appState.text("Buat Ulang", "Regenerate"), systemImage: "arrow.clockwise")
                                     .font(.subheadline)
                             }
                         }
@@ -94,7 +94,7 @@ struct ElderProfileView: View {
                                     ProgressView()
                                         .padding(.trailing, 4)
                                 }
-                                Label("Generate Caregiver Code", systemImage: "qrcode")
+                                Label(appState.text("Buat Kode Pendamping", "Generate Caregiver Code"), systemImage: "qrcode")
                                     .foregroundColor(.blue)
                             }
                         }
@@ -102,26 +102,41 @@ struct ElderProfileView: View {
                         .tutorialAnchor("elder.connectCode")
                     }
                 } header: {
-                    Text("Connect Caregiver")
+                    Text(appState.text("Hubungkan Pendamping", "Connect Caregiver"))
                 } footer: {
-                    Text("Generate a 6-digit code for your caregiver to enter in their app. Code expires in 30 seconds.")
+                    Text(appState.text("Buat kode 6 digit untuk dimasukkan pendamping pada aplikasinya. Kode berlaku 30 detik.", "Generate a 6-digit code for your caregiver to enter in their app. Code expires in 30 seconds."))
                 }
 
                 // Account
-                Section("Account") {
-                    NavigationLink("Family") {
+                Section(appState.text("Akun", "Account")) {
+                    NavigationLink(appState.text("Keluarga", "Family")) {
                         FamilyListView()
                             .environmentObject(appState)
                     }
-                    NavigationLink("Health Information") {
+                    NavigationLink(appState.text("Informasi Kesehatan", "Health Information")) {
                         HealthInfoView(mode: .edit)
                             .environmentObject(appState)
                     }
                 }
 
+                Section(appState.text("Bahasa", "Language")) {
+                    Picker(selection: Binding(
+                        get: { appState.language },
+                        set: { appState.setLanguage($0) }
+                    )) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(language.displayName).tag(language)
+                        }
+                    } label: {
+                        Label(appState.text("Bahasa aplikasi", "App language"), systemImage: "globe")
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityHint(appState.text("Pilih Bahasa Indonesia atau English", "Choose Bahasa Indonesia or English"))
+                }
+
                 // General
-                Section("General") {
-                    NavigationLink("Data & Privacy") {
+                Section(appState.text("Umum", "General")) {
+                    NavigationLink(appState.text("Data & Privasi", "Data & Privacy")) {
                         DataPrivacyView()
                     }
                 }
@@ -150,7 +165,7 @@ struct ElderProfileView: View {
             .navigationDestination(isPresented: $goToOnboarding) {
                 Onboarding()
             }
-            .navigationTitle("Profile")
+            .navigationTitle(appState.text("Profil", "Profile"))
             .navigationBarTitleDisplayMode(.inline)
             .onDisappear {
                 otpTimer?.invalidate()
@@ -227,7 +242,7 @@ struct ElderEditProfileView: View {
         NavigationStack {
             Form {
                 // User ID Section
-                Section("Apple User ID") {
+                Section(appState.text("ID Pengguna Apple", "Apple User ID")) {
                     Text(appState.currentUser?.id ?? "-")
                         .font(.system(.caption, design: .monospaced))
                         .foregroundColor(.secondary)
@@ -235,7 +250,7 @@ struct ElderEditProfileView: View {
                 }
                 
                 // Avatar Picker
-                Section("Avatar") {
+                Section(appState.text("Avatar", "Avatar")) {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
                         ForEach(avatarOptions, id: \.self) { emoji in
                             Text(emoji)
@@ -254,8 +269,8 @@ struct ElderEditProfileView: View {
                 }
                 
                 // Name
-                Section("Name") {
-                    TextField("Enter your name", text: $name)
+                Section(appState.text("Nama", "Name")) {
+                    TextField(appState.text("Masukkan nama Anda", "Enter your name"), text: $name)
                 }
                 
                 // Error
@@ -267,11 +282,11 @@ struct ElderEditProfileView: View {
                     }
                 }
             }
-            .navigationTitle("Edit Profile")
+            .navigationTitle(appState.text("Ubah Profil", "Edit Profile"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button(appState.text("Batal", "Cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -280,7 +295,7 @@ struct ElderEditProfileView: View {
                         if isSaving {
                             ProgressView()
                         } else {
-                            Text("Save").bold()
+                            Text(appState.text("Simpan", "Save")).bold()
                         }
                     }
                     .disabled(isSaving || name.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -317,7 +332,7 @@ struct ElderEditProfileView: View {
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
             else {
                 await MainActor.run {
-                    errorMessage = "Failed to save. Try again."
+                    errorMessage = appState.text("Gagal menyimpan. Coba lagi.", "Failed to save. Try again.")
                     isSaving = false
                 }
                 return
@@ -343,7 +358,7 @@ struct ElderEditProfileView: View {
             }
         } catch {
             await MainActor.run {
-                errorMessage = "Network error. Try again."
+                errorMessage = appState.text("Kesalahan jaringan. Coba lagi.", "Network error. Try again.")
                 isSaving = false
             }
         }
@@ -361,7 +376,7 @@ struct FamilyListView: View {
             if isLoading {
                 HStack { Spacer(); ProgressView(); Spacer() }
             } else if caregivers.isEmpty {
-                Text("No caregivers connected yet")
+                Text(appState.text("Belum ada pendamping yang terhubung", "No caregivers connected yet"))
                     .foregroundColor(.secondary)
                     .padding(.vertical, 8)
             } else {
@@ -381,7 +396,7 @@ struct FamilyListView: View {
                         }
                         VStack(alignment: .leading, spacing: 2) {
                             Text(caregiver.name).font(.body).fontWeight(.medium)
-                            Text("Caregiver").font(.caption).foregroundColor(.secondary)
+                            Text(appState.text("Pendamping", "Caregiver")).font(.caption).foregroundColor(.secondary)
                         }
                         Spacer()
                     }
@@ -389,7 +404,7 @@ struct FamilyListView: View {
                 }
             }
         }
-        .navigationTitle("Family")
+        .navigationTitle(appState.text("Keluarga", "Family"))
         .task { await fetchCaregivers() }
     }
 

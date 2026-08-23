@@ -120,7 +120,7 @@ struct DataPrivacyView: View {
 // MARK: - Reusable subviews
 
 private struct PrivacyDisclosure<Content: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     @ViewBuilder let content: () -> Content
     @State private var isExpanded = false
 
@@ -141,8 +141,8 @@ private struct PrivacyDisclosure<Content: View>: View {
 }
 
 private struct PrivacyRow: View {
-    let label: String
-    let detail: String
+    let label: LocalizedStringKey
+    let detail: LocalizedStringKey
 
     var body: some View {
         HStack(alignment: .top) {
@@ -160,8 +160,8 @@ private struct PrivacyRow: View {
 }
 
 private struct PrivacyBullet: View {
-    let text: String
-    init(_ text: String) { self.text = text }
+    let text: LocalizedStringKey
+    init(_ text: LocalizedStringKey) { self.text = text }
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {

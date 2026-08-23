@@ -126,7 +126,10 @@ struct TutorialOverlayView: View {
                     Text("\(tutorialManager.currentStepIndex + 1)/\(tutorialManager.totalSteps)")
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(.secondary)
-                        .accessibilityLabel("Step \(tutorialManager.currentStepIndex + 1) of \(tutorialManager.totalSteps)")
+                        .accessibilityLabel(appState.text(
+                            "Langkah \(tutorialManager.currentStepIndex + 1) dari \(tutorialManager.totalSteps)",
+                            "Step \(tutorialManager.currentStepIndex + 1) of \(tutorialManager.totalSteps)"
+                        ))
                         .padding(.leading, 8)
 
                     Spacer()

@@ -149,7 +149,10 @@ struct Onboarding: View {
                             Button {
                                 Task { await performDevLogin(role: "elder") }
                             } label: {
-                                Text(isLoading ? "Loading..." : "Elder")
+                                Text(appState.text(
+                                    isLoading ? "Memuat..." : "Lansia",
+                                    isLoading ? "Loading..." : "Elder"
+                                ))
                                     .foregroundColor(.white)
                                     .frame(width: 300)
                                     .padding()
@@ -162,7 +165,10 @@ struct Onboarding: View {
                             Button {
                                 Task { await performDevLogin(role: "child") }
                             } label: {
-                                Text(isLoading ? "Loading..." : "Children/Caregiver")
+                                Text(appState.text(
+                                    isLoading ? "Memuat..." : "Anak/Pendamping",
+                                    isLoading ? "Loading..." : "Children/Caregiver"
+                                ))
                                     .foregroundColor(.white)
                                     .frame(width: 300)
                                     .padding()
@@ -250,7 +256,7 @@ struct Onboarding: View {
         } catch {
             await MainActor.run {
                 isCheckingUser = false
-                errorMessage = "Gagal terhubung saat mengecek user."
+                errorMessage = appState.text("Gagal terhubung saat mengecek pengguna.", "Unable to connect while checking the user.")
             }
         }
     }
@@ -298,7 +304,7 @@ struct Onboarding: View {
                 else {
                     await MainActor.run {
                         isLoading = false
-                        errorMessage = "Gagal membaca response dari server."
+                        errorMessage = appState.text("Gagal membaca respons dari server.", "Unable to read the server response.")
                     }
                     return
                 }
@@ -323,14 +329,14 @@ struct Onboarding: View {
                 let errorMsg = errorResponse?["error"] as? String ?? "Terjadi kesalahan server"
                 await MainActor.run {
                     isLoading = false
-                    errorMessage = "Gagal: \(errorMsg)"
+                    errorMessage = appState.text("Gagal: \(errorMsg)", "Failed: \(errorMsg)")
                 }
             }
 
         } catch {
             await MainActor.run {
                 isLoading = false
-                errorMessage = "Gagal terhubung ke server."
+                errorMessage = appState.text("Gagal terhubung ke server.", "Unable to connect to the server.")
             }
         }
     }
