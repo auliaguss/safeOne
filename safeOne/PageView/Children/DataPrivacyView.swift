@@ -5,58 +5,58 @@
 
 import SwiftUI
 
-// MARK: - Data & Privacy View
-
 struct DataPrivacyView: View {
+    @EnvironmentObject var appState: AppState
 
     var body: some View {
         List {
-
-            // Summary card
             Section {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Your privacy matters")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(appState.text("Privasi Anda penting", "Your privacy matters"))
                         .font(.headline)
-                    Text("SafeOne collects only what's needed to keep elders safe and families connected. We never sell your data.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    Text(appState.text(
+                        "SafeOne hanya mengumpulkan data yang diperlukan untuk menjaga lansia tetap aman dan keluarga tetap terhubung. Kami tidak pernah menjual data Anda.",
+                        "SafeOne collects only the data needed to keep elders safe and families connected. We never sell your data."
+                    ))
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
                 }
                 .padding(.vertical, 4)
             }
 
             Section {
-                PrivacyDisclosure(title: "What We Collect") {
-                    PrivacyRow(label: "Personal info", detail: "Name, medical info (optional)")
-                    PrivacyRow(label: "Reminders & schedules", detail: "Title, notes, times, dates")
-                    PrivacyRow(label: "Audio / video", detail: "Call data — streamed only, not stored")
-                    PrivacyRow(label: "Device info", detail: "For performance and debugging")
+                PrivacyDisclosure(title: appState.text("Data yang Kami Kumpulkan", "What We Collect")) {
+                    PrivacyRow(label: appState.text("Informasi pribadi", "Personal info"), detail: appState.text("Nama, informasi kesehatan (opsional)", "Name, medical info (optional)"))
+                    PrivacyRow(label: appState.text("Pengingat & jadwal", "Reminders & schedules"), detail: appState.text("Judul, catatan, waktu, dan tanggal", "Title, notes, times, dates"))
+                    PrivacyRow(label: appState.text("Audio / video", "Audio / video"), detail: appState.text("Data panggilan hanya diteruskan, tidak disimpan", "Call data is streamed only and not stored"))
+                    PrivacyRow(label: appState.text("Info perangkat", "Device info"), detail: appState.text("Untuk performa dan debugging", "For performance and debugging"))
                 }
             }
 
             Section {
-                PrivacyDisclosure(title: "Why We Collect It") {
-                    PrivacyRow(label: "Phone number", detail: "Connect you with family members")
-                    PrivacyRow(label: "Reminders", detail: "Store schedules and send notifications")
-                    PrivacyRow(label: "Camera & mic", detail: "Enable video and voice calls")
-                    PrivacyRow(label: "Device info", detail: "Diagnose crashes and improve the app")
+                PrivacyDisclosure(title: appState.text("Mengapa Kami Mengumpulkannya", "Why We Collect It")) {
+                    PrivacyRow(label: appState.text("Nomor telepon", "Phone number"), detail: appState.text("Menghubungkan Anda dengan anggota keluarga", "Connect you with family members"))
+                    PrivacyRow(label: appState.text("Pengingat", "Reminders"), detail: appState.text("Menyimpan jadwal dan mengirim notifikasi", "Store schedules and send notifications"))
+                    PrivacyRow(label: appState.text("Kamera & mikrofon", "Camera & mic"), detail: appState.text("Mengaktifkan panggilan video dan suara", "Enable video and voice calls"))
+                    PrivacyRow(label: appState.text("Info perangkat", "Device info"), detail: appState.text("Mendiagnosis gangguan dan meningkatkan aplikasi", "Diagnose crashes and improve the app"))
                 }
             }
 
             Section {
-                PrivacyDisclosure(title: "How Data Is Used") {
-                    PrivacyBullet("Send reminders and notifications to elders")
-                    PrivacyBullet("Connect family during calls and SOS events")
-                    PrivacyBullet("Improve app performance and reliability")
-                    PrivacyBullet("Personalize the experience for each user")
+                PrivacyDisclosure(title: appState.text("Cara Data Digunakan", "How Data Is Used")) {
+                    PrivacyBullet(appState.text("Mengirim pengingat dan notifikasi ke lansia", "Send reminders and notifications to elders"))
+                    PrivacyBullet(appState.text("Menghubungkan keluarga saat panggilan dan keadaan darurat", "Connect family during calls and SOS events"))
+                    PrivacyBullet(appState.text("Meningkatkan performa dan keandalan aplikasi", "Improve app performance and reliability"))
+                    PrivacyBullet(appState.text("Menyesuaikan pengalaman untuk setiap pengguna", "Personalize the experience for each user"))
                 }
             }
 
             Section {
-                PrivacyDisclosure(title: "Data Sharing") {
-                    PrivacyBullet("Shared with your connected family members — this is the core feature")
+                PrivacyDisclosure(title: appState.text("Berbagi Data", "Data Sharing")) {
+                    PrivacyBullet(appState.text("Dibagikan kepada anggota keluarga yang terhubung karena ini fungsi utama aplikasi", "Shared with your connected family members because this is the app's core feature"))
                     PrivacyBullet("Supabase: secure database hosting")
                     PrivacyBullet("Agora: real-time voice and video calls")
-                    Text("We do not sell your data to anyone.")
+                    Text(appState.text("Kami tidak menjual data Anda kepada siapa pun.", "We do not sell your data to anyone."))
                         .font(.subheadline)
                         .foregroundColor(.primary)
                         .padding(.vertical, 2)
@@ -64,63 +64,64 @@ struct DataPrivacyView: View {
             }
 
             Section {
-                PrivacyDisclosure(title: "Storage & Security") {
-                    PrivacyBullet("All data is transmitted over HTTPS (encrypted)")
-                    PrivacyBullet("Authentication via secure tokens — passwords are never stored in plain text")
-                    PrivacyBullet("Access control ensures only authorized users can view data")
+                PrivacyDisclosure(title: appState.text("Penyimpanan & Keamanan", "Storage & Security")) {
+                    PrivacyBullet(appState.text("Semua data dikirim melalui HTTPS dan terenkripsi", "All data is transmitted over HTTPS and encrypted"))
+                    PrivacyBullet(appState.text("Autentikasi memakai token aman dan kata sandi tidak disimpan dalam bentuk teks biasa", "Authentication uses secure tokens and passwords are never stored in plain text"))
+                    PrivacyBullet(appState.text("Kontrol akses memastikan hanya pengguna berwenang yang dapat melihat data", "Access control ensures only authorized users can view data"))
                 }
             }
 
             Section {
-                PrivacyDisclosure(title: "Your Control") {
-                    PrivacyRow(label: "Edit profile", detail: "Anytime from Profile tab")
-                    PrivacyRow(label: "Manage elders", detail: "Add or remove connected elders")
-                    PrivacyRow(label: "App permissions", detail: "Camera, mic & notifications via iOS Settings")
-                    PrivacyRow(label: "Delete account", detail: "Contact support to remove all data")
+                PrivacyDisclosure(title: appState.text("Kontrol Anda", "Your Control")) {
+                    PrivacyRow(label: appState.text("Ubah profil", "Edit profile"), detail: appState.text("Kapan saja dari tab Profil", "Anytime from the Profile tab"))
+                    PrivacyRow(label: appState.text("Kelola keluarga", "Manage family"), detail: appState.text("Tambah atau hapus anggota keluarga yang terhubung", "Add or remove connected family members"))
+                    PrivacyRow(label: appState.text("Izin aplikasi", "App permissions"), detail: appState.text("Kamera, mikrofon, dan notifikasi lewat Pengaturan iOS", "Camera, mic, and notifications via iOS Settings"))
+                    PrivacyRow(label: appState.text("Hapus akun", "Delete account"), detail: appState.text("Hubungi dukungan untuk menghapus seluruh data", "Contact support to remove all data"))
                 }
             }
 
             Section {
-                PrivacyDisclosure(title: "Permissions") {
-                    PrivacyRow(label: "Camera", detail: "Video calls between family members")
-                    PrivacyRow(label: "Microphone", detail: "Voice and video calls")
-                    PrivacyRow(label: "Notifications", detail: "Reminder alerts and missed activity")
+                PrivacyDisclosure(title: appState.text("Izin", "Permissions")) {
+                    PrivacyRow(label: appState.text("Kamera", "Camera"), detail: appState.text("Panggilan video antar anggota keluarga", "Video calls between family members"))
+                    PrivacyRow(label: appState.text("Mikrofon", "Microphone"), detail: appState.text("Panggilan suara dan video", "Voice and video calls"))
+                    PrivacyRow(label: appState.text("Notifikasi", "Notifications"), detail: appState.text("Pengingat dan aktivitas yang terlewat", "Reminder alerts and missed activity"))
                 }
             }
 
             Section {
-                PrivacyDisclosure(title: "Data Retention") {
-                    PrivacyBullet("Data is stored while your account is active")
-                    PrivacyBullet("Deleted within 30 days after account deletion")
-                    PrivacyBullet("Call streams are not recorded or retained")
+                PrivacyDisclosure(title: appState.text("Retensi Data", "Data Retention")) {
+                    PrivacyBullet(appState.text("Data disimpan selama akun Anda aktif", "Data is stored while your account is active"))
+                    PrivacyBullet(appState.text("Dihapus dalam 30 hari setelah akun dihapus", "Deleted within 30 days after account deletion"))
+                    PrivacyBullet(appState.text("Streaming panggilan tidak direkam atau disimpan", "Call streams are not recorded or retained"))
                 }
             }
 
             Section {
-                PrivacyDisclosure(title: "Policy Updates") {
-                    PrivacyBullet("We may update this policy as the app evolves")
-                    PrivacyBullet("You will be notified of any significant changes")
-                    PrivacyBullet("Continued use of the app means you accept the updated policy")
+                PrivacyDisclosure(title: appState.text("Pembaruan Kebijakan", "Policy Updates")) {
+                    PrivacyBullet(appState.text("Kebijakan ini dapat diperbarui seiring perkembangan aplikasi", "We may update this policy as the app evolves"))
+                    PrivacyBullet(appState.text("Anda akan diberi tahu jika ada perubahan penting", "You will be notified of any significant changes"))
+                    PrivacyBullet(appState.text("Dengan terus menggunakan aplikasi, Anda menyetujui kebijakan yang diperbarui", "Continued use of the app means you accept the updated policy"))
                 }
             }
 
             Section {
-                Text("Last updated: June 2025")
+                Text(appState.text("Terakhir diperbarui: Juni 2025", "Last updated: June 2025"))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .listRowBackground(Color.clear)
             }
         }
-        .navigationTitle("Data & Privacy")
-        .navigationBarTitleDisplayMode(.large)
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(AppSurfaceBackground())
+        .navigationTitle(appState.text("Data & Privasi", "Data & Privacy"))
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-// MARK: - Reusable subviews
-
 private struct PrivacyDisclosure<Content: View>: View {
-    let title: LocalizedStringKey
+    let title: String
     @ViewBuilder let content: () -> Content
     @State private var isExpanded = false
 
@@ -141,8 +142,8 @@ private struct PrivacyDisclosure<Content: View>: View {
 }
 
 private struct PrivacyRow: View {
-    let label: LocalizedStringKey
-    let detail: LocalizedStringKey
+    let label: String
+    let detail: String
 
     var body: some View {
         HStack(alignment: .top) {
@@ -160,8 +161,11 @@ private struct PrivacyRow: View {
 }
 
 private struct PrivacyBullet: View {
-    let text: LocalizedStringKey
-    init(_ text: LocalizedStringKey) { self.text = text }
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -180,5 +184,6 @@ private struct PrivacyBullet: View {
 #Preview {
     NavigationStack {
         DataPrivacyView()
+            .environmentObject(AppState())
     }
 }

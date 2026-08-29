@@ -7,6 +7,90 @@
 
 import SwiftUI
 
+struct AppSurfaceBackground: View {
+    var body: some View {
+        ZStack {
+            Color.white
+            RadialGradient(
+                colors: [Color(red: 0, green: 218/255, blue: 195/255).opacity(0.15), Color.clear],
+                center: UnitPoint(x: 0.2, y: 0.1),
+                startRadius: 0,
+                endRadius: 400
+            )
+            RadialGradient(
+                colors: [Color(red: 0, green: 145/255, blue: 1.0).opacity(0.20), Color.clear],
+                center: UnitPoint(x: 0.8, y: 0.8),
+                startRadius: 0,
+                endRadius: 400
+            )
+        }
+        .ignoresSafeArea()
+    }
+}
+
+struct ProfileDestinationContainer<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        content()
+            .scrollContentBackground(.hidden)
+            .background(AppSurfaceBackground())
+    }
+}
+
+struct ConnectedPersonRow: View {
+    let name: String
+    let subtitle: String
+    let avatar: String?
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(0.15))
+                    .frame(width: 44, height: 44)
+                if let avatar, !avatar.isEmpty {
+                    Text(avatar)
+                        .font(.title3)
+                } else {
+                    Text(String(name.prefix(1)).uppercased())
+                        .font(.headline)
+                        .foregroundColor(.blue)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .font(.body)
+                    .fontWeight(.medium)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 6)
+    }
+}
+
+struct ListStatusRow: View {
+    let text: String
+    var showsProgress = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if showsProgress {
+                ProgressView()
+            }
+            Text(text)
+                .foregroundColor(.secondary)
+            Spacer()
+        }
+        .padding(.vertical, 8)
+    }
+}
+
 // MARK: - Elder Selector
 
 struct ElderSelectorView: View {

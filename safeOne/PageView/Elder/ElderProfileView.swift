@@ -4,12 +4,11 @@ struct ElderProfileView: View {
     @EnvironmentObject var appState: AppState
     @State private var hapticsEnabled: Bool = true
     @State private var textToSpeechEnabled: Bool = true
-    @State private var goToOnboarding = false
     @State private var soundsDefault: String = "Default"
-    
+    @State private var goToOnboarding = false
     @State private var showEditProfile = false
+    @State private var showLogoutConfirmation = false
 
-    
     // OTP State
     @State private var otpCode: String? = nil
     @State private var otpExpiresAt: Date? = nil
@@ -139,36 +138,36 @@ struct ElderProfileView: View {
                     NavigationLink(appState.text("Data & Privasi", "Data & Privacy")) {
                         DataPrivacyView()
                     }
+
+                    Button(role: .destructive) {
+                        showLogoutConfirmation = true
+                    } label: {
+                        Label(appState.text("Keluar", "Log Out"), systemImage: "rectangle.portrait.and.arrow.right")
+                    }
                 }
-
-
             }
             .scrollContentBackground(.hidden)
-            .background(
-                ZStack {
-                    Color.white
-                    RadialGradient(
-                        colors: [Color(red: 0, green: 218/255, blue: 195/255).opacity(0.15), Color.clear],
-                        center: UnitPoint(x: 0.2, y: 0.1),
-                        startRadius: 0,
-                        endRadius: 400
-                    )
-                    RadialGradient(
-                        colors: [Color(red: 0, green: 145/255, blue: 1.0).opacity(0.20), Color.clear],
-                        center: UnitPoint(x: 0.8, y: 0.8),
-                        startRadius: 0,
-                        endRadius: 400
-                    )
-                }
-                .ignoresSafeArea()
-            )
+            .background(AppSurfaceBackground())
             .navigationDestination(isPresented: $goToOnboarding) {
-                Onboarding()
+                Onboarding(skipExistingUserCheck: true)
             }
             .navigationTitle(appState.text("Profil", "Profile"))
             .navigationBarTitleDisplayMode(.inline)
             .onDisappear {
                 otpTimer?.invalidate()
+            }
+            .alert(
+                appState.text("Keluar dari akun?", "Log out of your account?"),
+                isPresented: $showLogoutConfirmation
+            ) {
+                Button(appState.text("Batal", "Cancel"), role: .cancel) {}
+                Button(appState.text("Keluar", "Log Out"), role: .destructive) {
+                    otpTimer?.invalidate()
+                    appState.clearSession()
+                    goToOnboarding = true
+                }
+            } message: {
+                Text(appState.text("Anda perlu masuk lagi untuk mengakses akun ini.", "You will need to sign in again to access this account."))
             }
         }
         .sheet(isPresented: $showEditProfile) {
@@ -373,38 +372,38 @@ struct FamilyListView: View {
 
     var body: some View {
         List {
-            if isLoading {
-                HStack { Spacer(); ProgressView(); Spacer() }
-            } else if caregivers.isEmpty {
-                Text(appState.text("Belum ada pendamping yang terhubung", "No caregivers connected yet"))
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 8)
-            } else {
-                ForEach(caregivers) { caregiver in
-                    HStack(spacing: 14) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.blue.opacity(0.15))
-                                .frame(width: 44, height: 44)
-                            if let avatar = caregiver.avatar, !avatar.isEmpty {
-                                Text(avatar).font(.title3)
-                            } else {
-                                Text(String(caregiver.name.prefix(1)))
-                                    .font(.headline)
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(caregiver.name).font(.body).fontWeight(.medium)
-                            Text(appState.text("Pendamping", "Caregiver")).font(.caption).foregroundColor(.secondary)
-                        }
-                        Spacer()
+            Section {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(appState.text("Pendamping yang terhubung", "Connected caregivers"))
+                        .font(.headline)
+                    Text(appState.text("Daftar ini menunjukkan anggota keluarga yang saat ini dapat membantu Anda.", "This list shows the family members who can currently support you."))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 4)
+            }
+
+            Section {
+                if isLoading {
+                    ListStatusRow(text: appState.text("Memuat daftar keluarga...", "Loading family list..."), showsProgress: true)
+                } else if caregivers.isEmpty {
+                    ListStatusRow(text: appState.text("Belum ada pendamping yang terhubung", "No caregivers connected yet"))
+                } else {
+                    ForEach(caregivers) { caregiver in
+                        ConnectedPersonRow(
+                            name: caregiver.name,
+                            subtitle: appState.text("Pendamping", "Caregiver"),
+                            avatar: caregiver.avatar
+                        )
                     }
-                    .padding(.vertical, 4)
                 }
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(AppSurfaceBackground())
         .navigationTitle(appState.text("Keluarga", "Family"))
+        .navigationBarTitleDisplayMode(.inline)
         .task { await fetchCaregivers() }
     }
 

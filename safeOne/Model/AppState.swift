@@ -45,7 +45,6 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 }
 
 class AppState: ObservableObject {
-
     // MARK: - Auth
     @Published var token: String? = nil
     @Published var currentUser: CurrentUser? = nil
@@ -201,6 +200,8 @@ class AppState: ObservableObject {
     func saveSession(token: String, user: CurrentUser) {
         self.token = token
         self.currentUser = user
+        self.elderTabSelection = .dashboard
+        self.childTabSelection = .dashboard
         UserDefaults.standard.set(token, forKey: "jwt_token")
         if let encoded = try? JSONEncoder().encode(user) {
             UserDefaults.standard.set(encoded, forKey: "current_user")
@@ -218,6 +219,8 @@ class AppState: ObservableObject {
     func clearSession() {
         self.token = nil
         self.currentUser = nil
+        self.elderTabSelection = .dashboard
+        self.childTabSelection = .dashboard
         self.stopPolling() // Matikan polling saat user logout
         UserDefaults.standard.removeObject(forKey: "jwt_token")
         UserDefaults.standard.removeObject(forKey: "current_user")

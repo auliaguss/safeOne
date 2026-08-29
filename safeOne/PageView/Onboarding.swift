@@ -1,4 +1,4 @@
-//
+ //
 //  Onboarding.swift
 //  safeOne
 //
@@ -8,6 +8,7 @@ import UIKit
 
 struct Onboarding: View {
     var onComplete: (String) -> Void = { _ in }
+    var skipExistingUserCheck: Bool = false
     @EnvironmentObject var appState: AppState
     @State private var navigateToElder = false
     @State private var navigateToChild = false
@@ -147,7 +148,7 @@ struct Onboarding: View {
 
                             // Tombol Elder
                             Button {
-                                Task { await performDevLogin(role: "elder") }
+                                Task { await handleRoleSelection(role: "elder") }
                             } label: {
                                 Text(appState.text(
                                     isLoading ? "Memuat..." : "Lansia",
@@ -163,7 +164,7 @@ struct Onboarding: View {
 
                             // Tombol Children
                             Button {
-                                Task { await performDevLogin(role: "child") }
+                                Task { await handleRoleSelection(role: "child") }
                             } label: {
                                 Text(appState.text(
                                     isLoading ? "Memuat..." : "Anak/Pendamping",
@@ -195,7 +196,91 @@ struct Onboarding: View {
         .navigationBarBackButtonHidden(true)
         // Jalankan pengecekan otomatis saat layar muncul
         .task {
-            await checkExistingUser()
+            if skipExistingUserCheck {
+                isCheckingUser = false
+            } else {
+                await checkExistingUser()
+            }
+        }
+    }
+
+    private func handleRoleSelection(role: String) async {
+        if skipExistingUserCheck {
+            let restored = await restoreExistingUserForSelectedRole()
+            if restored { return }
+        }
+
+        await performDevLogin(role: role)
+    }
+
+    @discardableResult
+    private func restoreExistingUserForSelectedRole() async -> Bool {
+        guard let url = URL(string: "\(AppConfig.baseURL)/auth/check-user") else { return false }
+
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 10
+
+        let devUserId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["devUserId": devUserId])
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let exists = json["exists"] as? Bool
+            else {
+                await MainActor.run { isLoading = false }
+                return false
+            }
+
+            guard exists,
+                  let token = json["token"] as? String,
+                  let userDict = json["user"] as? [String: Any],
+                  let userId = userDict["id"] as? String,
+                  let userName = userDict["name"] as? String,
+                  let userRole = userDict["role"] as? String
+            else {
+                await MainActor.run { isLoading = false }
+                return false
+            }
+
+            let user = CurrentUser(
+                id: userId,
+                name: userName,
+                role: userRole,
+                avatar: userDict["avatar"] as? String
+            )
+
+            await MainActor.run {
+                appState.saveSession(token: token, user: user)
+                isLoading = false
+
+                let isProfileComplete = !(userName.isEmpty) && !(userDict["avatar"] as? String ?? "").isEmpty
+                if isProfileComplete {
+                    if userRole == "elder" {
+                        navigateToElder = true
+                    } else {
+                        navigateToChild = true
+                    }
+                } else {
+                    navigateToSetupProfile = true
+                }
+            }
+            return true
+        } catch {
+            await MainActor.run {
+                isLoading = false
+                errorMessage = appState.text("Gagal terhubung ke server.", "Unable to connect to the server.")
+            }
+            return true
         }
     }
 
@@ -232,9 +317,9 @@ struct Onboarding: View {
                         await MainActor.run {
                             appState.saveSession(token: token, user: user)
                             isCheckingUser = false
-                            
+
                             let isProfileComplete = !(userName.isEmpty) && !(userDict["avatar"] as? String ?? "").isEmpty
-                            
+
                             if isProfileComplete {
                                 if userRole == "elder" {
                                     navigateToElder = true
@@ -321,7 +406,18 @@ struct Onboarding: View {
                 await MainActor.run {
                     appState.saveSession(token: token, user: user)
                     isLoading = false
-                    navigateToSetupProfile = true  // ← selalu ke setup profile dulu
+
+                    let isProfileComplete = !(userName.isEmpty) && !(userDict["avatar"] as? String ?? "").isEmpty
+
+                    if isProfileComplete {
+                        if userRole == "elder" {
+                            navigateToElder = true
+                        } else {
+                            navigateToChild = true
+                        }
+                    } else {
+                        navigateToSetupProfile = true
+                    }
                 }
 
             } else {

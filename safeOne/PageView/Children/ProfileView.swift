@@ -10,7 +10,7 @@ struct ProfileView: View {
     @EnvironmentObject var appState: AppState
     @State private var goToOnboarding = false
     @State private var showEditProfile = false
-    @State private var alertsValue: String = "Elders missed 1 reminder"
+    @State private var showLogoutConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -91,37 +91,36 @@ struct ProfileView: View {
                     NavigationLink(appState.text("Data & Privasi", "Data & Privacy")) {
                         DataPrivacyView()
                     }
+
+                    Button(role: .destructive) {
+                        showLogoutConfirmation = true
+                    } label: {
+                        Label(appState.text("Keluar", "Log Out"), systemImage: "rectangle.portrait.and.arrow.right")
+                    }
                 }
-
-
             }
             .scrollContentBackground(.hidden)
-            .background(
-                ZStack {
-                    Color.white
-                    RadialGradient(
-                        colors: [Color(red: 0, green: 218/255, blue: 195/255).opacity(0.15), Color.clear],
-                        center: UnitPoint(x: 0.2, y: 0.1),
-                        startRadius: 0,
-                        endRadius: 400
-                    )
-                    RadialGradient(
-                        colors: [Color(red: 0, green: 145/255, blue: 1.0).opacity(0.20), Color.clear],
-                        center: UnitPoint(x: 0.8, y: 0.8),
-                        startRadius: 0,
-                        endRadius: 400
-                    )
-                }
-                .ignoresSafeArea()
-            )
+            .background(AppSurfaceBackground())
             .navigationDestination(isPresented: $goToOnboarding) {
-                Onboarding()
+                Onboarding(skipExistingUserCheck: true)
             }
             .navigationTitle(appState.text("Profil", "Profile"))
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showEditProfile) {
                 EditProfileView()
                     .environmentObject(appState)
+            }
+            .alert(
+                appState.text("Keluar dari akun?", "Log out of your account?"),
+                isPresented: $showLogoutConfirmation
+            ) {
+                Button(appState.text("Batal", "Cancel"), role: .cancel) {}
+                Button(appState.text("Keluar", "Log Out"), role: .destructive) {
+                    appState.clearSession()
+                    goToOnboarding = true
+                }
+            } message: {
+                Text(appState.text("Anda perlu masuk lagi untuk mengakses akun ini.", "You will need to sign in again to access this account."))
             }
         }
     }
@@ -253,45 +252,45 @@ struct ElderListView: View {
 
     var body: some View {
         List {
-            if isLoading {
-                HStack { Spacer(); ProgressView(); Spacer() }
-            } else if elders.isEmpty {
-                Text(appState.text("Belum ada lansia yang terhubung", "No elders connected yet"))
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 8)
-            } else {
-                ForEach(elders) { elder in
-                    HStack(spacing: 14) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.blue.opacity(0.15))
-                                .frame(width: 44, height: 44)
-                            if let avatar = elder.avatar, !avatar.isEmpty {
-                                Text(avatar).font(.title3)
-                            } else {
-                                Text(String(elder.name.prefix(1)))
-                                    .font(.headline)
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(elder.name).font(.body).fontWeight(.medium)
-                            Text(appState.text("Lansia", "Elder")).font(.caption).foregroundColor(.secondary)
-                        }
-                        Spacer()
-                    }
-                    .padding(.vertical, 4)
+            Section {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(appState.text("Lansia yang terhubung", "Connected elders"))
+                        .font(.headline)
+                    Text(appState.text("Kelola daftar lansia yang dapat Anda bantu dari akun ini.", "Manage the elder accounts you can support from this profile."))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
-                .onDelete { indexSet in
-                    Task {
-                        for index in indexSet {
-                            await removeElder(elders[index].id)
+                .padding(.vertical, 4)
+            }
+
+            Section {
+                if isLoading {
+                    ListStatusRow(text: appState.text("Memuat daftar lansia...", "Loading elder list..."), showsProgress: true)
+                } else if elders.isEmpty {
+                    ListStatusRow(text: appState.text("Belum ada lansia yang terhubung", "No elders connected yet"))
+                } else {
+                    ForEach(elders) { elder in
+                        ConnectedPersonRow(
+                            name: elder.name,
+                            subtitle: appState.text("Lansia", "Elder"),
+                            avatar: elder.avatar
+                        )
+                    }
+                    .onDelete { indexSet in
+                        Task {
+                            for index in indexSet {
+                                await removeElder(elders[index].id)
+                            }
                         }
                     }
                 }
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(AppSurfaceBackground())
         .navigationTitle(appState.text("Daftar Lansia", "Elder Lists"))
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { showAddElder = true }) {
