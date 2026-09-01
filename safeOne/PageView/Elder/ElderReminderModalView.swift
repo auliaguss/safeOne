@@ -119,7 +119,7 @@ struct ElderReminderModalView: View {
                 // Image / Emoji circle
                 ReminderImageView(
                     imageName: reminder.imageName,
-                    size: 160,
+                    size: 130,
                     isCircle: true,
                     background: Color(hex: "F2F2F7")
                 )
@@ -128,7 +128,7 @@ struct ElderReminderModalView: View {
                 // Info
                 VStack(spacing: 8) {
                     Text(reminder.title)
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(.system(size: 25, weight: .bold, design: .rounded))
                         .foregroundColor(.black)
                         .multilineTextAlignment(.center)
 
@@ -146,8 +146,7 @@ struct ElderReminderModalView: View {
                     }
                 }
                 .padding(.horizontal, 24)
-
-                Spacer()
+                .padding(.bottom, 20)
 
                 // Times
                 if !displayTimes.isEmpty {
@@ -160,7 +159,7 @@ struct ElderReminderModalView: View {
                             ForEach(Array(displayTimes.enumerated()), id: \.offset) { i, utcTime in
                                 let isActive = i == active
                                 Text(utcToLocal(utcTime))
-                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
                                     .foregroundColor(isActive ? .white : Color(hex: "007AFF"))
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 8)
@@ -170,8 +169,10 @@ struct ElderReminderModalView: View {
                         }
                         .frame(minWidth: UIScreen.main.bounds.width, alignment: .center)
                     }
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 18)
                 }
+                
+                Spacer()
 
                 // Action buttons
                 VStack(spacing: 12) {
@@ -193,7 +194,7 @@ struct ElderReminderModalView: View {
                         .font(.system(.subheadline, design: .rounded))
                         .foregroundColor(Color(hex: "007AFF"))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 12)
                         .background(Color.white)
                         .cornerRadius(14)
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(hex: "007AFF"), lineWidth: 1))
@@ -204,7 +205,7 @@ struct ElderReminderModalView: View {
                             .font(.system(.headline, design: .rounded))
                             .foregroundColor(Color(hex: "007AFF"))
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
+                            .padding(.vertical, 12)
                             .background(Color.white)
                             .cornerRadius(14)
                             .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(hex: "007AFF"), lineWidth: 1))
@@ -220,7 +221,7 @@ struct ElderReminderModalView: View {
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 18)
+                            .padding(.vertical, 12)
                             .background(isDone || reminder.isCompleted ? Color.green : Color(hex: "007AFF"))
                             .cornerRadius(14)
                     }
@@ -237,8 +238,6 @@ struct ElderReminderModalView: View {
                             .foregroundColor(.black)
                             .font(.body)
                             .padding(8)
-                            .background(Color(hex: "F2F2F7"))
-                            .clipShape(Circle())
                     }
                 }
             }

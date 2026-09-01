@@ -172,7 +172,7 @@ struct ElderReminderFullScreenView: View {
             // Image / Emoji
             ReminderImageView(
                 imageName: fetchedImageName ?? reminder.imageName,
-                size: 260,
+                size: 180,
                 isCircle: true,
                 background: Color(hex: "F2F2F7")
             )
@@ -199,8 +199,6 @@ struct ElderReminderFullScreenView: View {
                 }
             }
             .padding(.horizontal, 28)
-
-            Spacer()
 
             // Times
             if !displayTimes.isEmpty {
