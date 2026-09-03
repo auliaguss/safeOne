@@ -9,6 +9,7 @@ struct OngoingCallView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     @State private var showSOS = false
+    @State private var isEndingCall = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -66,14 +67,7 @@ struct OngoingCallView: View {
 
                 // End call
                 Button {
-                    Task {
-                        try? await CallService.shared.endCall(
-                            callId: callId,
-                            token: appState.authToken
-                        )
-                        // TODO: leave Agora channel
-                        dismiss()
-                    }
+                    Task { await endCall() }
                 } label: {
                     Image(systemName: "phone.down.fill")
                         .font(.system(size: 24))
@@ -105,6 +99,24 @@ struct OngoingCallView: View {
             .background(Color(UIColor.systemGray6))
         }
         .ignoresSafeArea(edges: .bottom)
+        .onChange(of: callDuration) { duration in
+            if duration >= AppConfig.maximumCallDurationInSeconds {
+                Task { await endCall() }
+            }
+        }
+    }
+
+    @MainActor
+    private func endCall() async {
+        guard !isEndingCall else { return }
+        isEndingCall = true
+
+        AgoraManager.shared.leaveChannel()
+        try? await CallService.shared.endCall(
+            callId: callId,
+            token: appState.authToken
+        )
+        dismiss()
     }
 
     private func formatTime(_ seconds: Int) -> String {

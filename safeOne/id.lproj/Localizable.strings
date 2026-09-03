@@ -76,6 +76,10 @@
 "Connect Caregiver" = "Hubungkan Pendamping";
 "Generate a 6-digit code for your caregiver to enter in their app. Code expires in 30 seconds." = "Buat kode 6 digit untuk dimasukkan pendamping pada aplikasinya. Kode berlaku 30 detik.";
 
+/* Emergency calls */
+"Emergency Call Limits" = "Batas Panggilan Darurat";
+"Each call can last up to 1 minute. Elders can make up to 3 emergency calls per day." = "Setiap panggilan berlangsung maksimal 1 menit. Lansia dapat melakukan maksimal 3 panggilan darurat per hari.";
+
 /* Data and privacy */
 "Your privacy matters" = "Privasi Anda penting";
 "SafeOne collects only what's needed to keep elders safe and families connected. We never sell your data." = "SafeOne hanya mengumpulkan data yang diperlukan untuk menjaga lansia tetap aman dan keluarga tetap terhubung. Kami tidak pernah menjual data Anda.";

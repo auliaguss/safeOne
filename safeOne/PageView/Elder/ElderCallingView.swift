@@ -17,6 +17,8 @@ struct ElderCallingView: View {
     @State private var errorMessage: String? = nil
     @State private var activeCallData: InitiateCallResponse? = nil
     @State private var hasRemoteUserJoined = false
+    @State private var isEndingCall = false
+    @State private var hasRecordedDailyCall = false
 
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -168,7 +170,10 @@ struct ElderCallingView: View {
         .onReceive(timer) { _ in
             if isConnected {
                 callDuration += 1
-                if callDuration % 3 == 0 {
+
+                if callDuration >= AppConfig.maximumCallDurationInSeconds {
+                    Task { await endCall() }
+                } else if callDuration % 3 == 0 {
                     Task { await checkCallStatus() }
                 }
             } else {
@@ -214,6 +219,8 @@ struct ElderCallingView: View {
         if status == "ended" || status == "missed" || status == "cancelled" || status == "declined" {  // ← tambah "missed"
                 print("✅ Call ended/missed — menutup ElderCallingView")
                 await MainActor.run {
+                    guard !isEndingCall else { return }
+                    isEndingCall = true
                     agoraManager.leaveChannel()
                     dismiss()
                 }
@@ -242,6 +249,10 @@ struct ElderCallingView: View {
                 let decoded = try JSONDecoder().decode(InitiateCallResponse.self, from: data)
                 await MainActor.run {
                     self.activeCallData = decoded
+                    if !hasRecordedDailyCall, let userID = appState.currentUser?.id {
+                        ElderEmergencyCallQuota.recordSuccessfulCall(for: userID)
+                        hasRecordedDailyCall = true
+                    }
                     agoraManager.setup(appId: decoded.agoraAppId)
                     agoraManager.joinChannel(token: decoded.agoraToken, channelName: decoded.channelName)
                     withAnimation { self.isConnected = true }
@@ -257,7 +268,11 @@ struct ElderCallingView: View {
     }
 
     // MARK: - End Call
+    @MainActor
     private func endCall() async {
+        guard !isEndingCall else { return }
+        isEndingCall = true
+
         agoraManager.leaveChannel()
         if let callId = activeCallData?.callId, let token = appState.token {
             guard let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/end") else { return }
@@ -270,7 +285,11 @@ struct ElderCallingView: View {
     }
 
     // MARK: - Cancel
+    @MainActor
     private func cancelCall() async {
+        guard !isEndingCall else { return }
+        isEndingCall = true
+
         agoraManager.leaveChannel()
         if let callId = activeCallData?.callId, let token = appState.token {
             guard let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/end") else { return }

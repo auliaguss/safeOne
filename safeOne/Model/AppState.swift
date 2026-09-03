@@ -30,7 +30,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .indonesian: return "Bahasa Indonesia"
+        case .indonesian: return "Bahasa"
         case .english: return "English"
         }
     }

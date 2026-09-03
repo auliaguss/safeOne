@@ -5,6 +5,21 @@
 
 import SwiftUI
 import AVFoundation
+import TipKit
+
+struct EmergencyCallLimitTip: Tip {
+    var title: Text {
+        Text("Emergency Call Limits")
+    }
+
+    var message: Text? {
+        Text("Each call can last up to 1 minute. Elders can make up to 3 emergency calls per day.")
+    }
+
+    var image: Image? {
+        Image(systemName: "phone.badge.clock")
+    }
+}
 
 struct ElderDashboard: View {
     @EnvironmentObject var appState: AppState
@@ -13,6 +28,10 @@ struct ElderDashboard: View {
 
     @State private var showCallingScreen = false
     @State private var selectedReminder: APIReminder? = nil
+    @State private var showDailyCallLimitAlert = false
+    @State private var showEmergencyCallLimitTip = false
+
+    private let emergencyCallLimitTip = EmergencyCallLimitTip()
 
     private func byDate(_ a: APIReminder, _ b: APIReminder) -> Bool {
         (APIReminder.parseDate(a.date) ?? .distantFuture) < (APIReminder.parseDate(b.date) ?? .distantFuture)
@@ -91,8 +110,7 @@ struct ElderDashboard: View {
 
             // Step 5.4 — Accessible SOS button with text label
             Button(action: {
-                UINotificationFeedbackGenerator().notificationOccurred(.error)
-                showCallingScreen = true
+                startEmergencyCall()
             }) {
                 VStack(spacing: 2) {
                     Image(systemName: "phone.fill").font(.title2)
@@ -105,7 +123,15 @@ struct ElderDashboard: View {
                 .shadow(color: Color(hex: "FF5E5B").opacity(0.4), radius: 8, x: 0, y: 4)
             }
             .tutorialAnchor("elder.sos")
+            .popoverTip(
+                showEmergencyCallLimitTip ? emergencyCallLimitTip : nil,
+                arrowEdge: .bottom
+            )
             .accessibilityLabel("Emergency SOS call")
+            .accessibilityHint(appState.text(
+                "Maksimal 1 menit per sesi dan 3 panggilan per hari.",
+                "Maximum 1 minute per session and 3 calls per day."
+            ))
             .padding(.trailing, 24)
             .padding(.bottom, 20)
         }
@@ -120,6 +146,17 @@ struct ElderDashboard: View {
         }
         .fullScreenCover(isPresented: $showCallingScreen) {
             ElderCallingView()
+        }
+        .alert(
+            appState.text("Batas panggilan harian tercapai", "Daily call limit reached"),
+            isPresented: $showDailyCallLimitAlert
+        ) {
+            Button(appState.text("Mengerti", "OK"), role: .cancel) { }
+        } message: {
+            Text(appState.text(
+                "Anda sudah melakukan 3 panggilan darurat hari ini. Silakan coba lagi besok.",
+                "You have made 3 emergency calls today. Please try again tomorrow."
+            ))
         }
         .task {
             // Initial load
@@ -136,6 +173,9 @@ struct ElderDashboard: View {
             // tutorial tries to spotlight it.
             try? await Task.sleep(nanoseconds: 300_000_000)
             tutorialManager.startElderTutorialIfNeeded(appState: appState)
+            if !tutorialManager.isActive {
+                showEmergencyCallLimitTip = true
+            }
 
             // Polling loop — keeps elder dashboard in sync with child edits.
             // SwiftUI cancels this task automatically when the view disappears.
@@ -152,10 +192,29 @@ struct ElderDashboard: View {
                 appState.pendingReminderDeepLink = nil
             }
         }
+        .onChange(of: tutorialManager.isActive) { wasActive, isActive in
+            if wasActive && !isActive {
+                showEmergencyCallLimitTip = true
+            }
+        }
         .onAppear {
             AVAudioApplication.requestRecordPermission { _ in }
             AVCaptureDevice.requestAccess(for: .video) { _ in }
         }
+    }
+
+    private func startEmergencyCall() {
+        guard let userID = appState.currentUser?.id else { return }
+
+        guard ElderEmergencyCallQuota.canStartCall(for: userID) else {
+            showEmergencyCallLimitTip = false
+            showDailyCallLimitAlert = true
+            return
+        }
+
+        showEmergencyCallLimitTip = false
+        UINotificationFeedbackGenerator().notificationOccurred(.error)
+        showCallingScreen = true
     }
 
     // MARK: - "All caught up" empty state (Step 5.3)

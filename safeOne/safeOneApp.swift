@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import TipKit
 
 @main
 struct safeOneApp: App {
@@ -20,6 +21,12 @@ struct safeOneApp: App {
     private let voipManager = VoIPManager.shared
     
     init() {
+        do {
+            try Tips.configure()
+        } catch {
+            print("❌ TipKit configuration failed: \(error.localizedDescription)")
+        }
+
         _ = VoIPManager.shared
         NotificationManager.shared.setup()
     }

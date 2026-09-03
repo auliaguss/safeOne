@@ -7,6 +7,9 @@
 import Foundation
 
 enum AppConfig {
+    static let maximumCallDurationInSeconds = 60
+    static let maximumDailyEmergencyCalls = 3
+
     static let baseURL: String = {
         guard let value = Bundle.main.object(
             forInfoDictionaryKey: "API_BASE_URL"

@@ -23,6 +23,7 @@ struct IncomingCallView: View {
     @State private var callDuration = 0
     @State private var showSOS = false
     @State private var hasRemoteUserJoined = false
+    @State private var isEndingCall = false
     
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
@@ -151,7 +152,12 @@ struct IncomingCallView: View {
                 .onReceive(timer) { _ in
                     if isConnected {
                         callDuration += 1
-                        
+
+                        if callDuration >= AppConfig.maximumCallDurationInSeconds {
+                            Task { await endCall() }
+                            return
+                        }
+
                         // Polling setiap 3 detik — deteksi jika elder end call
                         if callDuration % 3 == 0 {
                             Task { await checkCallStatus() }
@@ -243,7 +249,11 @@ struct IncomingCallView: View {
         }
         
         // MARK: - Decline
+        @MainActor
         private func declineCall() async {
+            guard !isEndingCall else { return }
+            isEndingCall = true
+
             VoIPManager.shared.reportCallEnded()  // ← tambah ini
             guard let token = appState.token else { return }
             guard let url = URL(string: "\(AppConfig.baseURL)/calls/\(callId)/decline") else { return }
@@ -263,7 +273,11 @@ struct IncomingCallView: View {
         }
         
         // MARK: - End
+        @MainActor
         private func endCall() async {
+            guard !isEndingCall else { return }
+            isEndingCall = true
+
             agoraManager.leaveChannel()
             VoIPManager.shared.reportCallEnded()  // ← tambah ini
             
@@ -306,6 +320,8 @@ struct IncomingCallView: View {
             
             if status == "ended" || status == "missed" {
                 await MainActor.run {
+                    guard !isEndingCall else { return }
+                    isEndingCall = true
                     agoraManager.leaveChannel()
                     appState.inActiveCall = false
                     appState.incomingCall = nil
@@ -318,4 +334,3 @@ struct IncomingCallView: View {
             String(format: "%02d:%02d", seconds / 60, seconds % 60)
         }
     }
-
