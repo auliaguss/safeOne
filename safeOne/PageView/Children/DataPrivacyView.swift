@@ -15,8 +15,8 @@ struct DataPrivacyView: View {
                     Text(appState.text("Privasi Anda penting", "Your privacy matters"))
                         .font(.headline)
                     Text(appState.text(
-                        "SafeOne hanya mengumpulkan data yang diperlukan untuk menjaga lansia tetap aman dan keluarga tetap terhubung. Kami tidak pernah menjual data Anda.",
-                        "SafeOne collects only the data needed to keep elders safe and families connected. We never sell your data."
+                        "Healder hanya mengumpulkan data yang diperlukan untuk menjaga lansia tetap aman dan keluarga tetap terhubung. Kami tidak pernah menjual data Anda.",
+                        "Healder collects only the data needed to keep elders safe and families connected. We never sell your data."
                     ))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -67,7 +67,6 @@ struct DataPrivacyView: View {
                 PrivacyDisclosure(title: appState.text("Penyimpanan & Keamanan", "Storage & Security")) {
                     PrivacyBullet(appState.text("Semua data dikirim melalui HTTPS dan terenkripsi", "All data is transmitted over HTTPS and encrypted"))
                     PrivacyBullet(appState.text("Autentikasi memakai token aman dan kata sandi tidak disimpan dalam bentuk teks biasa", "Authentication uses secure tokens and passwords are never stored in plain text"))
-                    PrivacyBullet(appState.text("Kontrol akses memastikan hanya pengguna berwenang yang dapat melihat data", "Access control ensures only authorized users can view data"))
                 }
             }
 
@@ -91,7 +90,6 @@ struct DataPrivacyView: View {
             Section {
                 PrivacyDisclosure(title: appState.text("Retensi Data", "Data Retention")) {
                     PrivacyBullet(appState.text("Data disimpan selama akun Anda aktif", "Data is stored while your account is active"))
-                    PrivacyBullet(appState.text("Dihapus dalam 30 hari setelah akun dihapus", "Deleted within 30 days after account deletion"))
                     PrivacyBullet(appState.text("Streaming panggilan tidak direkam atau disimpan", "Call streams are not recorded or retained"))
                 }
             }
@@ -105,7 +103,7 @@ struct DataPrivacyView: View {
             }
 
             Section {
-                Text(appState.text("Terakhir diperbarui: Juni 2025", "Last updated: June 2025"))
+                Text(appState.text("Terakhir diperbarui: Sept 2026", "Last updated: Sept 2026"))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)

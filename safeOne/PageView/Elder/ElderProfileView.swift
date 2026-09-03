@@ -2,12 +2,14 @@ import SwiftUI
 
 struct ElderProfileView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.scenePhase) private var scenePhase
     @State private var hapticsEnabled: Bool = true
     @State private var textToSpeechEnabled: Bool = true
     @State private var soundsDefault: String = "Default"
     @State private var goToOnboarding = false
     @State private var showEditProfile = false
     @State private var showLogoutConfirmation = false
+    @State private var remainingEmergencyCalls = AppConfig.maximumDailyEmergencyCalls
 
     // OTP State
     @State private var otpCode: String? = nil
@@ -51,6 +53,30 @@ struct ElderProfileView: View {
                     .padding(.vertical, 4)
                     .contentShape(Rectangle())
                     .onTapGesture { showEditProfile = true }
+                }
+
+                Section {
+                    HStack {
+                        Label(
+                            appState.text("Tersisa hari ini", "Remaining today"),
+                            systemImage: "phone.badge.clock"
+                        )
+                        Spacer()
+                        Text(appState.text(
+                            "\(remainingEmergencyCalls) dari \(AppConfig.maximumDailyEmergencyCalls)",
+                            "\(remainingEmergencyCalls) of \(AppConfig.maximumDailyEmergencyCalls)"
+                        ))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(remainingEmergencyCalls == 0 ? Color.red : Color.blue)
+                    }
+                    .accessibilityElement(children: .combine)
+                } header: {
+                    Text(appState.text("Kuota Panggilan Darurat", "Emergency Call Allowance"))
+                } footer: {
+                    Text(appState.text(
+                        "Setiap panggilan maksimal 1 menit. Kuota direset setiap hari.",
+                        "Each call lasts up to 1 minute. The allowance resets daily."
+                    ))
                 }
 
                 // OTP Section
@@ -153,6 +179,19 @@ struct ElderProfileView: View {
             }
             .navigationTitle(appState.text("Profil", "Profile"))
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                refreshRemainingEmergencyCalls()
+            }
+            .onChange(of: appState.elderTabSelection) { _, selectedTab in
+                if selectedTab == .profile {
+                    refreshRemainingEmergencyCalls()
+                }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    refreshRemainingEmergencyCalls()
+                }
+            }
             .onDisappear {
                 otpTimer?.invalidate()
             }
@@ -174,6 +213,16 @@ struct ElderProfileView: View {
             ElderEditProfileView()
                 .environmentObject(appState)
         }
+    }
+
+    private func refreshRemainingEmergencyCalls() {
+        guard let userID = appState.currentUser?.id else {
+            remainingEmergencyCalls = 0
+            return
+        }
+
+        let callsUsed = ElderEmergencyCallQuota.callsUsedToday(for: userID)
+        remainingEmergencyCalls = max(AppConfig.maximumDailyEmergencyCalls - callsUsed, 0)
     }
 
     // MARK: - Generate OTP
