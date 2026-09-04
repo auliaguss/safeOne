@@ -190,6 +190,30 @@ struct APIReminder: Codable, Identifiable {
         case imageName      = "image_name"
         case completionLogs = "completion_logs"
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decode(String.self, forKey: .id)
+        elderId = try container.decodeIfPresent(String.self, forKey: .elderId)
+        title = try container.decode(String.self, forKey: .title)
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        date = try container.decode(String.self, forKey: .date)
+        endDate = try container.decodeIfPresent(String.self, forKey: .endDate)
+        times = try container.decodeIfPresent([String].self, forKey: .times)
+        repeatOption = try container.decode(String.self, forKey: .repeatOption)
+        earlyReminder = try container.decodeIfPresent(String.self, forKey: .earlyReminder)
+        category = try container.decodeIfPresent(String.self, forKey: .category)
+        imageName = try container.decodeIfPresent(String.self, forKey: .imageName)
+
+        // PATCH /reminders/:id is allowed to return only the reminder columns
+        // documented by the backend, which do not include progress fields.
+        isCompleted = try container.decodeIfPresent(Bool.self, forKey: .isCompleted) ?? false
+        completedCount = try container.decodeIfPresent(Int.self, forKey: .completedCount) ?? 0
+        totalCount = try container.decodeIfPresent(Int.self, forKey: .totalCount)
+            ?? max(times?.count ?? 0, 1)
+        completionLogs = try container.decodeIfPresent([CompletionLog].self, forKey: .completionLogs)
+    }
 }
 
 // MARK: - Elder Item

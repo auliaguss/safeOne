@@ -337,7 +337,7 @@ struct AddReminderView: View {
                             .padding(.vertical, 14)
                         }
                         .foregroundColor(.red)
-                        .disabled(isDeleting)
+                        .disabled(isDeleting || isSaving)
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
                     }
@@ -378,7 +378,7 @@ struct AddReminderView: View {
                             }
                         }
                     }
-                    .disabled(title.isEmpty || isSaving)
+                    .disabled(title.isEmpty || isSaving || isDeleting)
                 }
             }
             .task {
@@ -501,8 +501,16 @@ struct AddReminderView: View {
 
     // MARK: - Delete
     private func deleteReminder() async {
-        guard let token = appState.token, let reminder = editingReminder else { return }
+        guard let token = appState.token else {
+            errorMessage = appState.text(
+                "Sesi tidak valid, silakan login ulang.",
+                "Your session is invalid. Please sign in again."
+            )
+            return
+        }
+        guard let reminder = editingReminder else { return }
         isDeleting = true
+        errorMessage = nil
         do {
             try await ReminderRepository.deleteReminder(id: reminder.id, token: token)
             await MainActor.run {
@@ -511,7 +519,13 @@ struct AddReminderView: View {
                 dismiss()
             }
         } catch {
-            await MainActor.run { isDeleting = false }
+            await MainActor.run {
+                isDeleting = false
+                errorMessage = appState.text(
+                    "Gagal menghapus pengingat: \(error.localizedDescription)",
+                    "Failed to delete reminder: \(error.localizedDescription)"
+                )
+            }
         }
     }
 
@@ -521,7 +535,7 @@ struct AddReminderView: View {
             errorMessage = appState.text("Sesi tidak valid, silakan login ulang.", "Your session is invalid. Please sign in again.")
             return
         }
-        guard let targetElderId = selectedElderId else {
+        if editingReminder == nil, selectedElderId == nil {
             errorMessage = appState.text("Pilih lansia terlebih dahulu", "Please select an elder first")
             return
         }
@@ -543,27 +557,45 @@ struct AddReminderView: View {
         timeFmt.dateFormat = "HH:mm"
         let timesArray = times.map { timeFmt.string(from: $0.date) }
 
-        // End date as "yyyy-MM-dd" or NSNull
+        // PATCH expects ISO-8601 for endDate; null explicitly removes it.
         let endDateValue: Any
         if hasEndDate {
-            let df = DateFormatter()
-            df.dateFormat = "yyyy-MM-dd"
-            endDateValue = df.string(from: endDate)
+            if isEditing {
+                let endOfDay = cal.date(
+                    bySettingHour: 23,
+                    minute: 59,
+                    second: 59,
+                    of: endDate
+                ) ?? endDate
+                let isoFormatter = ISO8601DateFormatter()
+                isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                endDateValue = isoFormatter.string(from: endOfDay)
+            } else {
+                // Preserve the create endpoint's existing date-only payload.
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                endDateValue = dateFormatter.string(from: endDate)
+            }
         } else {
             endDateValue = NSNull()
         }
 
-        let body: [String: Any] = [
-            "elderId": targetElderId,
+        var body: [String: Any] = [
             "title": title,
             "notes": notes,
             "date": ISO8601DateFormatter().string(from: finalDate),
             "endDate": endDateValue,
             "times": timesArray,
-            "earlyReminder": earlyReminder.rawValue,
-            "category": category.rawValue.lowercased(),
             "imageName": usePhoto ? encodePhoto() : selectedEmoji
         ]
+
+        if editingReminder == nil, let targetElderId = selectedElderId {
+            // These create-only values are not currently editable in this form.
+            // Omitting them from PATCH preserves the exact values on the server.
+            body["elderId"] = targetElderId
+            body["earlyReminder"] = earlyReminder.rawValue
+            body["category"] = category.rawValue.lowercased()
+        }
 
         do {
             if let r = editingReminder {

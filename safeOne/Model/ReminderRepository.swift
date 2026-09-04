@@ -8,6 +8,10 @@ import Foundation
 struct ReminderRepository {
     private static let base = AppConfig.baseURL
 
+    private struct DeleteReminderResponse: Decodable {
+        let success: Bool
+    }
+
     // MARK: - Fetch
 
     static func fetchElders(token: String) async throws -> [ElderItem] {
@@ -59,9 +63,12 @@ struct ReminderRepository {
     }
 
     static func deleteReminder(id: String, token: String) async throws {
-        let req = try makeRequest("\(base)/reminders/\(id)", token: token, method: "DELETE")
+        var req = try makeRequest("\(base)/reminders/\(id)", token: token, method: "DELETE")
+        req.setValue(nil, forHTTPHeaderField: "Content-Type")
         let (data, res) = try await URLSession.shared.data(for: req)
         try checkStatus(res, data: data)
+        let result = try JSONDecoder().decode(DeleteReminderResponse.self, from: data)
+        guard result.success else { throw URLError(.badServerResponse) }
     }
 
     // MARK: - Elder Actions
