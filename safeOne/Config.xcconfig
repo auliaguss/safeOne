@@ -3,5 +3,5 @@
 
 // CATATAN: "//" dianggap komentar di xcconfig, jadi URL harus ditulis dengan variabel SLASH
 SLASH = /
-API_BASE_URL = https:$(SLASH)/safe-one-backend.vercel.app/api
+API_BASE_URL = https:$(SLASH)/api.healder.my.id/api
 APP_ID = 92a8aeae1db644dabe3cd77a614344dc
