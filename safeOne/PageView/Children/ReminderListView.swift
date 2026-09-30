@@ -30,6 +30,8 @@ struct ReminderListView: View {
     @State private var reminders: [APIReminder] = []
     @State private var isLoading = false
     @State private var initialLoadDone = false
+    @State private var showPaywall = false
+    @ObservedObject private var subscription = SubscriptionManager.shared
 
     var activeReminders: [APIReminder] { reminders.filter { !$0.isPast } }
     var pastReminders: [APIReminder]   { reminders.filter { $0.isPast } }
@@ -43,7 +45,7 @@ struct ReminderListView: View {
                         .font(.title2)
                         .bold()
                     Spacer()
-                    Button(action: { activeSheet = .create }) {
+                    Button(action: addReminderTapped) {
                         ZStack {
                             Circle()
                                 .fill(isLoading ? Color(.systemGray4) : Color.blue)
@@ -162,6 +164,10 @@ struct ReminderListView: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(appState)
+        }
         // Initial load
         .task {
             await fetchElders()
@@ -171,6 +177,15 @@ struct ReminderListView: View {
         .onAppear {
             guard initialLoadDone else { return }
             Task { await fetchReminders() }
+        }
+    }
+
+    /// Free accounts get a fixed number of reminders per elder; more needs Premium.
+    private func addReminderTapped() {
+        if !subscription.isSubscribed && reminders.count >= AppConfig.freeReminderLimitPerElder {
+            showPaywall = true
+        } else {
+            activeSheet = .create
         }
     }
 

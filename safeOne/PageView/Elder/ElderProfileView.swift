@@ -2,14 +2,15 @@ import SwiftUI
 
 struct ElderProfileView: View {
     @EnvironmentObject var appState: AppState
-    @Environment(\.scenePhase) private var scenePhase
     @State private var hapticsEnabled: Bool = true
     @State private var textToSpeechEnabled: Bool = true
     @State private var soundsDefault: String = "Default"
     @State private var goToOnboarding = false
     @State private var showEditProfile = false
     @State private var showLogoutConfirmation = false
-    @State private var remainingEmergencyCalls = AppConfig.maximumDailyEmergencyCalls
+    @ObservedObject private var subscription = SubscriptionManager.shared
+    @State private var showPaywall = false
+    @State private var showCaregiverLimitAlert = false
 
     // OTP State
     @State private var otpCode: String? = nil
@@ -55,30 +56,6 @@ struct ElderProfileView: View {
                     .onTapGesture { showEditProfile = true }
                 }
 
-                Section {
-                    HStack {
-                        Label(
-                            appState.text("Tersisa hari ini", "Remaining today"),
-                            systemImage: "phone.badge.clock"
-                        )
-                        Spacer()
-                        Text(appState.text(
-                            "\(remainingEmergencyCalls) dari \(AppConfig.maximumDailyEmergencyCalls)",
-                            "\(remainingEmergencyCalls) of \(AppConfig.maximumDailyEmergencyCalls)"
-                        ))
-                        .fontWeight(.semibold)
-                        .foregroundStyle(remainingEmergencyCalls == 0 ? Color.red : Color.blue)
-                    }
-                    .accessibilityElement(children: .combine)
-                } header: {
-                    Text(appState.text("Kuota Panggilan Darurat", "Emergency Call Allowance"))
-                } footer: {
-                    Text(appState.text(
-                        "Setiap panggilan maksimal 1 menit. Kuota direset setiap hari.",
-                        "Each call lasts up to 1 minute. The allowance resets daily."
-                    ))
-                }
-
                 // OTP Section
                 Section {
                     if let code = otpCode, otpSecondsLeft > 0 {
@@ -112,7 +89,7 @@ struct ElderProfileView: View {
                         .tutorialAnchor("elder.connectCode")
                     } else {
                         Button {
-                            Task { await generateOtp() }
+                            Task { await requestCaregiverCode() }
                         } label: {
                             HStack {
                                 if isGeneratingOtp {
@@ -131,6 +108,8 @@ struct ElderProfileView: View {
                 } footer: {
                     Text(appState.text("Buat kode 6 digit untuk dimasukkan pendamping pada aplikasinya. Kode berlaku 30 detik.", "Generate a 6-digit code for your caregiver to enter in their app. Code expires in 30 seconds."))
                 }
+
+                PremiumSection()
 
                 // Account
                 Section(appState.text("Akun", "Account")) {
@@ -179,19 +158,6 @@ struct ElderProfileView: View {
             }
             .navigationTitle(appState.text("Profil", "Profile"))
             .navigationBarTitleDisplayMode(.inline)
-            .onAppear {
-                refreshRemainingEmergencyCalls()
-            }
-            .onChange(of: appState.elderTabSelection) { _, selectedTab in
-                if selectedTab == .profile {
-                    refreshRemainingEmergencyCalls()
-                }
-            }
-            .onChange(of: scenePhase) { _, phase in
-                if phase == .active {
-                    refreshRemainingEmergencyCalls()
-                }
-            }
             .onDisappear {
                 otpTimer?.invalidate()
             }
@@ -213,16 +179,55 @@ struct ElderProfileView: View {
             ElderEditProfileView()
                 .environmentObject(appState)
         }
+        .fullScreenCover(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(appState)
+        }
+        .alert(
+            appState.text("Batas pendamping tercapai", "Caregiver limit reached"),
+            isPresented: $showCaregiverLimitAlert
+        ) {
+            Button(appState.text("Mengerti", "OK"), role: .cancel) { }
+        } message: {
+            Text(appState.text(
+                "Anda sudah terhubung dengan \(AppConfig.premiumCaregiverLimit) pendamping.",
+                "You're already connected to \(AppConfig.premiumCaregiverLimit) caregivers."
+            ))
+        }
     }
 
-    private func refreshRemainingEmergencyCalls() {
-        guard let userID = appState.currentUser?.id else {
-            remainingEmergencyCalls = 0
-            return
+    /// Free accounts can connect one caregiver; Premium raises the cap.
+    private func requestCaregiverCode() async {
+        isGeneratingOtp = true
+        let caregiverCount = await fetchCaregiverCount()
+        isGeneratingOtp = false
+
+        if let caregiverCount {
+            if !subscription.isSubscribed && caregiverCount >= AppConfig.freeCaregiverLimit {
+                showPaywall = true
+                return
+            }
+            if caregiverCount >= AppConfig.premiumCaregiverLimit {
+                showCaregiverLimitAlert = true
+                return
+            }
         }
 
-        let callsUsed = ElderEmergencyCallQuota.callsUsedToday(for: userID)
-        remainingEmergencyCalls = max(AppConfig.maximumDailyEmergencyCalls - callsUsed, 0)
+        await generateOtp()
+    }
+
+    private func fetchCaregiverCount() async -> Int? {
+        guard let token = appState.token,
+              let url = URL(string: "\(AppConfig.baseURL)/users/me/caregivers")
+        else { return nil }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let decoded = try? JSONDecoder().decode([BackendElder].self, from: data)
+        else { return nil }
+        return decoded.count
     }
 
     // MARK: - Generate OTP

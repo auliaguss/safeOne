@@ -25,11 +25,13 @@ struct ElderDashboard: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var tutorialManager: TutorialManager
     @StateObject private var vm = ReminderViewModel()
+    @ObservedObject private var subscription = SubscriptionManager.shared
 
     @State private var showCallingScreen = false
     @State private var selectedReminder: APIReminder? = nil
     @State private var showDailyCallLimitAlert = false
     @State private var showEmergencyCallLimitTip = false
+    @State private var showPaywall = false
 
     private let emergencyCallLimitTip = EmergencyCallLimitTip()
 
@@ -124,14 +126,19 @@ struct ElderDashboard: View {
             }
             .tutorialAnchor("elder.sos")
             .popoverTip(
-                showEmergencyCallLimitTip ? emergencyCallLimitTip : nil,
+                showEmergencyCallLimitTip && subscription.isSubscribed ? emergencyCallLimitTip : nil,
                 arrowEdge: .bottom
             )
             .accessibilityLabel("Emergency SOS call")
-            .accessibilityHint(appState.text(
-                "Maksimal 1 menit per sesi dan 3 panggilan per hari.",
-                "Maximum 1 minute per session and 3 calls per day."
-            ))
+            .accessibilityHint(subscription.isSubscribed
+                ? appState.text(
+                    "Maksimal 1 menit per sesi dan 3 panggilan per hari.",
+                    "Maximum 1 minute per session and 3 calls per day."
+                )
+                : appState.text(
+                    "Panggilan darurat membutuhkan Premium.",
+                    "Emergency calls require Premium."
+                ))
             .padding(.trailing, 24)
             .padding(.bottom, 20)
         }
@@ -146,6 +153,10 @@ struct ElderDashboard: View {
         }
         .fullScreenCover(isPresented: $showCallingScreen) {
             ElderCallingView()
+        }
+        .fullScreenCover(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(appState)
         }
         .alert(
             appState.text("Batas panggilan harian tercapai", "Daily call limit reached"),
@@ -205,6 +216,13 @@ struct ElderDashboard: View {
 
     private func startEmergencyCall() {
         guard let userID = appState.currentUser?.id else { return }
+
+        // Emergency calls are a Premium-only feature.
+        guard subscription.isSubscribed else {
+            showEmergencyCallLimitTip = false
+            showPaywall = true
+            return
+        }
 
         guard ElderEmergencyCallQuota.canStartCall(for: userID) else {
             showEmergencyCallLimitTip = false

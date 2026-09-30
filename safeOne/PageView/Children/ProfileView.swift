@@ -48,6 +48,8 @@ struct ProfileView: View {
                     .onTapGesture { showEditProfile = true }
                 }
 
+                PremiumSection()
+
                 // Account
                 Section(appState.text("Akun", "Account")) {
                     NavigationLink(appState.text("Daftar Lansia", "Elder Lists")) {
@@ -247,6 +249,8 @@ struct ElderListView: View {
     @State private var elders: [BackendElder] = []
     @State private var isLoading = false
     @State private var showAddElder = false
+    @State private var showPaywall = false
+    @ObservedObject private var subscription = SubscriptionManager.shared
     @State private var otpCode = ""
     @State private var errorMessage: String? = nil
 
@@ -293,9 +297,10 @@ struct ElderListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { showAddElder = true }) {
+                Button(action: addElderTapped) {
                     Image(systemName: "plus")
                 }
+                .disabled(isLoading)
             }
             ToolbarItem(placement: .navigationBarLeading) {
                 EditButton()
@@ -312,7 +317,20 @@ struct ElderListView: View {
         } message: {
             Text(errorMessage ?? appState.text("Masukkan kode OTP dari perangkat lansia.", "Enter the OTP code from the elder's device."))
         }
+        .fullScreenCover(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(appState)
+        }
         .task { await fetchElders() }
+    }
+
+    /// Free accounts can connect one elder; more needs Premium.
+    private func addElderTapped() {
+        if !subscription.isSubscribed && elders.count >= AppConfig.freeElderLimit {
+            showPaywall = true
+        } else {
+            showAddElder = true
+        }
     }
 
     private func fetchElders() async {
