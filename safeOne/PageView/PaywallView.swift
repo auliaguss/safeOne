@@ -12,7 +12,6 @@ struct PaywallView: View {
 
     @State private var selectedPlan: PremiumPlan = .yearly
     @State private var isPurchasing = false
-    @State private var showPurchaseUnavailable = false
     @State private var showPrivacy = false
     @State private var resultAlert: PaywallAlert? = nil
 
@@ -60,16 +59,6 @@ struct PaywallView: View {
         }
         .disabled(isPurchasing)
         .task { await subscription.loadOfferings() }
-        // Shown when the store offering isn't set up yet, so testers can still use a code.
-        .redeemCodeAlert(
-            isPresented: $showPurchaseUnavailable,
-            title: appState.text("Paket belum tersedia", "Plan not available yet"),
-            message: appState.text(
-                "Pembelian belum bisa dilakukan saat ini. Punya kode redeem? Masukkan di bawah.",
-                "Purchases aren't available right now. Have a redeem code? Enter it below."
-            ),
-            onRedeemed: { dismiss() }
-        )
         .alert(item: $resultAlert) { alert in
             Alert(
                 title: Text(alert.title),
@@ -95,7 +84,10 @@ struct PaywallView: View {
                 dismiss()
             }
         } catch SubscriptionError.planUnavailable {
-            showPurchaseUnavailable = true
+            resultAlert = PaywallAlert(
+                title: appState.text("Paket belum tersedia", "Plan not available yet"),
+                message: appState.text("Paket langganan belum tersedia saat ini.", "The subscription plan is not available right now.")
+            )
         } catch {
             resultAlert = PaywallAlert(
                 title: appState.text("Pembelian gagal", "Purchase failed"),
@@ -364,73 +356,13 @@ private struct PlanCard: View {
     }
 }
 
-// MARK: - Redeem Code Alert
-
-private struct RedeemCodeAlert: ViewModifier {
-    @EnvironmentObject var appState: AppState
-    @Binding var isPresented: Bool
-    let title: String
-    let message: String
-    var onRedeemed: () -> Void
-
-    @State private var code = ""
-    @State private var errorMessage: String? = nil
-    @State private var showSuccess = false
-
-    func body(content: Content) -> some View {
-        content
-            .alert(title, isPresented: $isPresented) {
-                TextField(appState.text("Kode redeem", "Redeem code"), text: $code)
-                    .textInputAutocapitalization(.characters)
-                    .autocorrectionDisabled()
-                Button(appState.text("Redeem", "Redeem")) { redeem() }
-                Button(appState.text("Batal", "Cancel"), role: .cancel) {
-                    code = ""
-                    errorMessage = nil
-                }
-            } message: {
-                Text(errorMessage ?? message)
-            }
-            .alert(appState.text("Pro aktif", "Pro unlocked"), isPresented: $showSuccess) {
-                Button(appState.text("Mantap", "Great"), role: .cancel) { onRedeemed() }
-            } message: {
-                Text(appState.text("Semua fitur Pro sekarang tersedia di akun ini.", "All Pro features are now available on this account."))
-            }
-    }
-
-    private func redeem() {
-        let success = SubscriptionManager.shared.redeem(code)
-        code = ""
-        if success {
-            errorMessage = nil
-            showSuccess = true
-        } else {
-            errorMessage = appState.text("Kode tidak valid. Coba lagi.", "Invalid code. Please try again.")
-            // Re-present after the current alert finishes dismissing.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { isPresented = true }
-        }
-    }
-}
-
-extension View {
-    func redeemCodeAlert(
-        isPresented: Binding<Bool>,
-        title: String,
-        message: String,
-        onRedeemed: @escaping () -> Void = {}
-    ) -> some View {
-        modifier(RedeemCodeAlert(isPresented: isPresented, title: title, message: message, onRedeemed: onRedeemed))
-    }
-}
-
 // MARK: - Premium Profile Section
 
-/// Premium status + upgrade/redeem entry points, shared by both profile screens.
+/// Premium status + upgrade entry point, shared by both profile screens.
 struct PremiumSection: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject private var subscription = SubscriptionManager.shared
     @State private var showPaywall = false
-    @State private var showRedeem = false
 
     var body: some View {
         Section {
@@ -442,11 +374,6 @@ struct PremiumSection: View {
                     .foregroundStyle(subscription.isSubscribed ? Color.blue : Color.secondary)
             }
             .accessibilityElement(children: .combine)
-            .redeemCodeAlert(
-                isPresented: $showRedeem,
-                title: appState.text("Redeem Kode", "Redeem Code"),
-                message: appState.text("Masukkan kode untuk membuka Pro.", "Enter your code to unlock Pro.")
-            )
             .fullScreenCover(isPresented: $showPaywall) {
                 PaywallView()
                     .environmentObject(appState)
@@ -457,11 +384,6 @@ struct PremiumSection: View {
                     showPaywall = true
                 } label: {
                     Label(appState.text("Upgrade ke Pro", "Upgrade to Pro"), systemImage: "sparkles")
-                }
-                Button {
-                    showRedeem = true
-                } label: {
-                    Label(appState.text("Redeem Kode", "Redeem Code"), systemImage: "ticket")
                 }
             }
         } header: {

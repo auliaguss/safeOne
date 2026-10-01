@@ -148,7 +148,7 @@ class AppState: ObservableObject {
            let user = try? JSONDecoder().decode(CurrentUser.self, from: userData) {
             self.currentUser = user
         }
-        SubscriptionManager.shared.load(for: currentUser?.id)
+        SubscriptionManager.shared.load(for: currentUser?.id, token: token)
 
         deepLinkObserver = NotificationCenter.default
             .publisher(for: .reminderDeepLink)
@@ -207,7 +207,7 @@ class AppState: ObservableObject {
         if let encoded = try? JSONEncoder().encode(user) {
             UserDefaults.standard.set(encoded, forKey: "current_user")
         }
-        SubscriptionManager.shared.load(for: user.id)
+        SubscriptionManager.shared.load(for: user.id, token: token)
         // Save regular push token for any role that logs in
         if let pushToken = pendingPushToken {
             savePushToken(pushToken)
@@ -226,7 +226,7 @@ class AppState: ObservableObject {
         self.stopPolling() // Matikan polling saat user logout
         UserDefaults.standard.removeObject(forKey: "jwt_token")
         UserDefaults.standard.removeObject(forKey: "current_user")
-        SubscriptionManager.shared.load(for: nil)
+        SubscriptionManager.shared.load(for: nil, token: nil)
     }
     
     var isLoggedIn: Bool {

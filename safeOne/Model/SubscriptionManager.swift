@@ -8,24 +8,38 @@ import Combine
 import RevenueCat
 
 /// Single source of premium state for the app.
-/// Premium = an active RevenueCat "healder_pro" entitlement OR a locally redeemed code.
-/// The local redeem path is temporary until the backend validates codes.
+/// RevenueCat handles the App Store transaction. The backend is the source of
+/// truth for the user's Pro access and expiry date.
 final class SubscriptionManager: ObservableObject {
     static let shared = SubscriptionManager()
 
     static let entitlementID = "healder_pro"
 
-    /// Reusable promo codes — any account can redeem them.
-    /// Move to the backend before release: anything in the binary can be extracted.
-    private static let redeemCodes: Set<String> = ["SAFEONE2026"]
-
     @Published private(set) var isSubscribed = false
+    @Published private(set) var expiredPro: Date?
+    @Published private(set) var proPlan: PremiumPlan?
     /// Store packages from the current RevenueCat offering, once loaded.
     @Published private(set) var packages: [PremiumPlan: Package] = [:]
 
     private var userID: String?
-    private var hasRedeemedCode = false
-    private var hasActiveEntitlement = false
+    private var authToken: String?
+
+    private let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = formatter.date(from: value) { return date }
+            formatter.formatOptions = [.withInternetDateTime]
+            guard let date = formatter.date(from: value) else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO-8601 date")
+            }
+            return date
+        }
+        return decoder
+    }()
 
     private init() {
         #if DEBUG
@@ -41,46 +55,60 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
-    private func storageKey(for userID: String) -> String {
-        "is_subscribed_\(userID)"
-    }
-
     private func apply(_ info: CustomerInfo) {
-        hasActiveEntitlement = info.entitlements[Self.entitlementID]?.isActive == true
-        isSubscribed = hasRedeemedCode || hasActiveEntitlement
+        // RevenueCat state does not replace the backend account status.
+        _ = info
     }
 
     /// Called by AppState whenever the signed-in account changes.
-    func load(for userID: String?) {
+    func load(for userID: String?, token: String?) {
         self.userID = userID
-        hasActiveEntitlement = false
-        hasRedeemedCode = userID.map { UserDefaults.standard.bool(forKey: storageKey(for: $0)) } ?? false
-        isSubscribed = hasRedeemedCode
+        self.authToken = token
+        expiredPro = nil
+        proPlan = nil
+        isSubscribed = false
 
         Task {
-            do {
-                if let userID {
+            if let userID {
+                do {
                     // Backend user id as appUserID, so purchases follow the account across devices.
                     let (info, _) = try await Purchases.shared.logIn(userID)
                     guard self.userID == userID else { return }
                     apply(info)
-                } else if !Purchases.shared.isAnonymous {
-                    _ = try await Purchases.shared.logOut()
+                } catch {
+                    print("❌ RevenueCat login failed: \(error.localizedDescription)")
                 }
-            } catch {
-                print("❌ RevenueCat login failed: \(error.localizedDescription)")
+                guard self.userID == userID else { return }
+                _ = await refreshStatus()
+            } else if !Purchases.shared.isAnonymous {
+                do {
+                    _ = try await Purchases.shared.logOut()
+                } catch {
+                    print("❌ RevenueCat logout failed: \(error.localizedDescription)")
+                }
             }
         }
     }
 
-    /// Returns true when the code is valid and premium was unlocked for the current account.
-    func redeem(_ code: String) -> Bool {
-        let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        guard Self.redeemCodes.contains(normalized), let userID else { return false }
-        UserDefaults.standard.set(true, forKey: storageKey(for: userID))
-        hasRedeemedCode = true
-        isSubscribed = true
-        return true
+    /// Refreshes Pro state from the authenticated backend account.
+    @discardableResult
+    func refreshStatus() async -> Bool {
+        guard userID != nil, let authToken,
+              let url = URL(string: "\(AppConfig.baseURL)/subscriptions/pro") else { return false }
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+            let (data, response) = try await URLSession.shared.data(for: request)
+            try validate(response: response, data: data)
+            let status = try decoder.decode(SubscriptionStatus.self, from: data)
+            guard self.authToken == authToken else { return false }
+            apply(status)
+            return isSubscribed
+        } catch {
+            print("❌ Subscription status failed: \(error.localizedDescription)")
+            return false
+        }
     }
 
     // MARK: - Store
@@ -104,15 +132,46 @@ final class SubscriptionManager: ObservableObject {
         guard let package = packages[plan] else { throw SubscriptionError.planUnavailable }
 
         let result = try await Purchases.shared.purchase(package: package)
-        apply(result.customerInfo)
-        return !result.userCancelled && isSubscribed
+        guard !result.userCancelled else { return false }
+        try await activateOnBackend(plan: plan)
+        return await refreshStatus()
     }
 
     /// Returns true when a previous purchase was found and premium is active.
     func restore() async throws -> Bool {
         let info = try await Purchases.shared.restorePurchases()
         apply(info)
-        return isSubscribed
+        return await refreshStatus()
+    }
+
+    private func activateOnBackend(plan: PremiumPlan) async throws {
+        guard userID != nil, let authToken,
+              let url = URL(string: "\(AppConfig.baseURL)/subscriptions/pro") else {
+            throw SubscriptionError.notAuthenticated
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["plan": plan.rawValue])
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+        apply(try decoder.decode(SubscriptionStatus.self, from: data))
+    }
+
+    private func apply(_ status: SubscriptionStatus) {
+        expiredPro = status.expiredPro
+        proPlan = status.plan.flatMap(PremiumPlan.init(rawValue:))
+        isSubscribed = status.isPro && (status.expiredPro ?? .distantPast) > Date()
+    }
+
+    private func validate(response: URLResponse, data: Data) throws {
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200..<300).contains(httpResponse.statusCode) else {
+            let message = (try? JSONDecoder().decode(BackendError.self, from: data))?.error
+            throw SubscriptionError.backend(message ?? "Subscription request failed")
+        }
     }
 
     // MARK: - Display prices
@@ -145,13 +204,23 @@ final class SubscriptionManager: ObservableObject {
     }
 }
 
-enum SubscriptionError: Error {
+enum SubscriptionError: Error, LocalizedError {
     case planUnavailable
+    case notAuthenticated
+    case backend(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .planUnavailable: return "Subscription plan is not available."
+        case .notAuthenticated: return "Please sign in before subscribing."
+        case .backend(let message): return message
+        }
+    }
 }
 
 // MARK: - Plans
 
-enum PremiumPlan: CaseIterable, Identifiable {
+enum PremiumPlan: String, CaseIterable, Identifiable {
     case monthly, yearly
 
     var id: Self { self }
@@ -180,4 +249,20 @@ enum PremiumPlan: CaseIterable, Identifiable {
         formatter.usesGroupingSeparator = true
         return "Rp" + (formatter.string(from: NSNumber(value: amount)) ?? "\(amount)")
     }
+}
+
+private struct SubscriptionStatus: Decodable {
+    let isPro: Bool
+    let expiredPro: Date?
+    let plan: String?
+
+    enum CodingKeys: String, CodingKey {
+        case isPro
+        case expiredPro = "expired_pro"
+        case plan
+    }
+}
+
+private struct BackendError: Decodable {
+    let error: String
 }
