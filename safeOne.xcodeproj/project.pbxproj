@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BC0000032FD040840000D46F /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = BC0000022FD040840000D46F /* RevenueCat */; };
 		A142BD022FD040840000D46F /* AIAEC in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD012FD040840000D46F /* AIAEC */; };
 		A142BD042FD040840000D46F /* AIAECLL in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD032FD040840000D46F /* AIAECLL */; };
 		A142BD062FD040840000D46F /* AINS in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD052FD040840000D46F /* AINS */; };
@@ -151,6 +152,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BC0000032FD040840000D46F /* RevenueCat in Frameworks */,
 				A142BD162FD040840000D46F /* ReplayKit in Frameworks */,
 				A142BD0C2FD040840000D46F /* ClearVision in Frameworks */,
 				A142BD042FD040840000D46F /* AIAECLL in Frameworks */,
@@ -334,6 +336,7 @@
 				A142BD1D2FD040840000D46F /* VideoAv1CodecEnc */,
 				A142BD1F2FD040840000D46F /* VideoCodecEnc */,
 				A142BD212FD040840000D46F /* VirtualBackground */,
+				BC0000022FD040840000D46F /* RevenueCat */,
 			);
 			productName = safeOne;
 			productReference = 219E090D2FBD7FC000118AB9 /* HearH.app */;
@@ -366,6 +369,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */,
+				BC0000012FD040840000D46F /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 219E090E2FBD7FC000118AB9 /* Products */;
@@ -669,6 +673,14 @@
 				minimumVersion = 4.6.2;
 			};
 		};
+		BC0000012FD040840000D46F /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -756,6 +768,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
 			productName = VirtualBackground;
+		};
+		BC0000022FD040840000D46F /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BC0000012FD040840000D46F /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

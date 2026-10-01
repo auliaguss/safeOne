@@ -26,6 +26,16 @@ enum AppConfig {
         return value
     }()
 
+    static let revenueCatAPIKey: String = {
+        guard let value = Bundle.main.object(
+            forInfoDictionaryKey: "REVENUECAT_API_KEY"
+        ) as? String else {
+            fatalError("REVENUECAT_API_KEY belum dikonfigurasi")
+        }
+
+        return value
+    }()
+
     static let appID: String = {
         guard let value = Bundle.main.object(
             forInfoDictionaryKey: "APP_ID"

@@ -11,7 +11,12 @@ struct PaywallView: View {
     @ObservedObject private var subscription = SubscriptionManager.shared
 
     @State private var selectedPlan: PremiumPlan = .yearly
+    @State private var isPurchasing = false
     @State private var showPurchaseUnavailable = false
+    @State private var showPrivacy = false
+    @State private var resultAlert: PaywallAlert? = nil
+
+    private static let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -20,17 +25,17 @@ struct PaywallView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     header
-                        .padding(.top, 44)
+                        .padding(.top, 28)
 
                     sectionTitle(appState.text("Yang Kamu Dapatkan", "What’s Included"))
-                        .padding(.top, 24)
+                        .padding(.top, 20)
 
                     featureCard
                         .padding(.top, 12)
                         .padding(.horizontal, -8)
 
                     sectionTitle(appState.text("Pilih paketmu", "Choose your plan"))
-                        .padding(.top, 28)
+                        .padding(.top, 22)
 
                     HStack(spacing: 16) {
                         ForEach(PremiumPlan.allCases) { plan in
@@ -53,16 +58,74 @@ struct PaywallView: View {
                 .padding(.trailing, 20)
                 .padding(.top, 8)
         }
-        // Purchases aren't wired yet — the CTA offers the redeem code instead.
+        .disabled(isPurchasing)
+        .task { await subscription.loadOfferings() }
+        // Shown when the store offering isn't set up yet, so testers can still use a code.
         .redeemCodeAlert(
             isPresented: $showPurchaseUnavailable,
-            title: appState.text("Pembelian segera hadir", "Purchases coming soon"),
+            title: appState.text("Paket belum tersedia", "Plan not available yet"),
             message: appState.text(
-                "Pembelian dalam aplikasi belum tersedia. Punya kode redeem? Masukkan di bawah.",
-                "In-app purchases aren't available yet. Have a redeem code? Enter it below."
+                "Pembelian belum bisa dilakukan saat ini. Punya kode redeem? Masukkan di bawah.",
+                "Purchases aren't available right now. Have a redeem code? Enter it below."
             ),
             onRedeemed: { dismiss() }
         )
+        .alert(item: $resultAlert) { alert in
+            Alert(
+                title: Text(alert.title),
+                message: Text(alert.message),
+                dismissButton: .default(Text("OK")) {
+                    if alert.dismissesPaywall { dismiss() }
+                }
+            )
+        }
+        .sheet(isPresented: $showPrivacy) {
+            NavigationStack { DataPrivacyView() }
+                .environmentObject(appState)
+        }
+    }
+
+    // MARK: - Actions
+
+    private func purchase() async {
+        isPurchasing = true
+        defer { isPurchasing = false }
+        do {
+            if try await subscription.purchase(selectedPlan) {
+                dismiss()
+            }
+        } catch SubscriptionError.planUnavailable {
+            showPurchaseUnavailable = true
+        } catch {
+            resultAlert = PaywallAlert(
+                title: appState.text("Pembelian gagal", "Purchase failed"),
+                message: error.localizedDescription
+            )
+        }
+    }
+
+    private func restore() async {
+        isPurchasing = true
+        defer { isPurchasing = false }
+        do {
+            if try await subscription.restore() {
+                resultAlert = PaywallAlert(
+                    title: appState.text("Premium dipulihkan", "Premium restored"),
+                    message: appState.text("Langganan Premium kamu aktif lagi.", "Your Premium subscription is active again."),
+                    dismissesPaywall: true
+                )
+            } else {
+                resultAlert = PaywallAlert(
+                    title: appState.text("Tidak ada pembelian", "No purchases found"),
+                    message: appState.text("Tidak ada langganan aktif di Apple ID ini.", "There's no active subscription on this Apple ID.")
+                )
+            }
+        } catch {
+            resultAlert = PaywallAlert(
+                title: appState.text("Gagal memulihkan", "Restore failed"),
+                message: error.localizedDescription
+            )
+        }
     }
 
     // MARK: - Sections
@@ -116,7 +179,7 @@ struct PaywallView: View {
             )
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 18)
+        .padding(.vertical, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -131,14 +194,20 @@ struct PaywallView: View {
     private var footer: some View {
         VStack(spacing: 10) {
             Button {
-                showPurchaseUnavailable = true
+                Task { await purchase() }
             } label: {
-                Text(appState.text("Buka dengan Premium", "Unlock with Premium"))
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(Capsule().fill(Color.black))
+                ZStack {
+                    if isPurchasing {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text(appState.text("Buka dengan Premium", "Unlock with Premium"))
+                            .font(.system(size: 18, weight: .medium))
+                    }
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(Capsule().fill(Color.black))
             }
             .padding(.horizontal, 16)
 
@@ -148,6 +217,20 @@ struct PaywallView: View {
             ))
             .font(.system(size: 12))
             .foregroundColor(Color(hex: "8E8E93"))
+
+            // Required by App Review for auto-renewable subscriptions.
+            HStack(spacing: 6) {
+                Button(appState.text("Pulihkan Pembelian", "Restore Purchases")) {
+                    Task { await restore() }
+                }
+                Text("·")
+                Link(appState.text("Ketentuan", "Terms of Use"), destination: Self.termsURL)
+                Text("·")
+                Button(appState.text("Privasi", "Privacy Policy")) { showPrivacy = true }
+            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(Color(hex: "6C6C70"))
+            .tint(Color(hex: "6C6C70"))
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
@@ -165,6 +248,13 @@ struct PaywallView: View {
         }
         .accessibilityLabel(appState.text("Tutup", "Close"))
     }
+}
+
+private struct PaywallAlert: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+    var dismissesPaywall = false
 }
 
 // MARK: - Feature Row
@@ -220,6 +310,8 @@ private struct PlanCard: View {
         }
     }
 
+    @ObservedObject private var subscription = SubscriptionManager.shared
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(name)
@@ -227,14 +319,14 @@ private struct PlanCard: View {
                 .foregroundColor(.black)
                 .padding(.bottom, 4)
 
-            if let fullPrice = plan.fullPrice {
-                Text(PremiumPlan.rupiah(fullPrice))
+            if plan == .yearly, let fullPrice = subscription.fullYearPrice() {
+                Text(fullPrice)
                     .font(.system(size: 12))
                     .strikethrough()
                     .foregroundColor(Color(hex: "8E8E93"))
             }
 
-            Text(PremiumPlan.rupiah(plan.price))
+            Text(subscription.price(for: plan))
                 .font(.system(size: 24, weight: .semibold))
                 .foregroundColor(.black)
                 .minimumScaleFactor(0.7)
@@ -256,8 +348,8 @@ private struct PlanCard: View {
                 .stroke(isSelected ? Color.black : Color(hex: "D1D1D6"), lineWidth: isSelected ? 2 : 1)
         )
         .overlay(alignment: .topTrailing) {
-            if let savings = plan.savings {
-                Text(appState.text("HEMAT \(PremiumPlan.rupiah(savings))", "SAVE \(PremiumPlan.rupiah(savings))"))
+            if plan == .yearly, let savings = subscription.yearlySavings() {
+                Text(appState.text("HEMAT \(savings)", "SAVE \(savings)"))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
