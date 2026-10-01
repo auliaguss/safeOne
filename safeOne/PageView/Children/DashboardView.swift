@@ -2,30 +2,37 @@
 //  DashboardView.swift
 //  ElderCareApp
 //
-//  Created by Hercio Venceslau Silla on 28/05/26.
-//
 
 import SwiftUI
+import Combine
 
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var tutorialManager: TutorialManager
+
+    @State private var elders: [ElderItem] = []
+    @State private var selectedElderId: String? = nil
+    @State private var reminders: [APIReminder] = []
+    @State private var selectedDate: Date = Date()
+    @State private var showDatePicker = false
+    @State private var isLoading = false
 
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 0) {
 
-                // Header
+                // Header — identical design, date now reflects selectedDate
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Daily Check-In")
                             .font(.title2)
                             .fontWeight(.bold)
-                        Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).year()))
+                        Text(selectedDate.formatted(.dateTime.weekday(.wide).day().month(.wide).year()))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Button(action: {}) {
+                    Button(action: { showDatePicker = true }) {
                         Image(systemName: "calendar")
                             .font(.title3)
                             .foregroundColor(.primary)
@@ -35,17 +42,55 @@ struct DashboardView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 12)
 
-                // Elder Selector
-                ElderSelectorView()
-                    .padding(.horizontal)
-                    .padding(.bottom, 16)
+                // Elder Selector — same pill style as ElderSelectorView.
+                // Always rendered (even with an empty-state hint) so it's a stable,
+                // real anchor for the tutorial regardless of whether elders are loaded yet.
+                Group {
+                    if elders.isEmpty {
+                        Text("Connect an elder in Profile to get started")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(elders) { elder in
+                                    Button {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            selectedElderId = elder.id
+                                        }
+                                        Task { await fetchReminders() }
+                                    } label: {
+                                        Text(elder.name)
+                                            .font(.subheadline)
+                                            .fontWeight(selectedElderId == elder.id ? .semibold : .regular)
+                                            .foregroundColor(selectedElderId == elder.id ? .white : .primary)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 8)
+                                            .background(
+                                                Capsule()
+                                                    .fill(selectedElderId == elder.id ? Color.black : Color(.systemGray5))
+                                            )
+                                    }
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                }
+                .padding(.bottom, 16)
+                .tutorialAnchor("child.elders")
 
                 Divider()
 
-                // Reminders
-                let todayReminders = appState.todayReminders(for: appState.selectedElder)
-
-                if todayReminders.isEmpty {
+                // Reminder list
+                if isLoading {
+                    Spacer()
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                    Spacer()
+                } else if reminders.isEmpty {
                     Spacer()
                     VStack(spacing: 12) {
                         Image(systemName: "checkmark.circle")
@@ -60,7 +105,7 @@ struct DashboardView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 12) {
-                            ForEach(todayReminders) { reminder in
+                            ForEach(reminders) { reminder in
                                 DashboardReminderRow(reminder: reminder)
                             }
                         }
@@ -69,31 +114,97 @@ struct DashboardView: View {
                     }
                 }
             }
+            .background(
+                ZStack {
+                    Color.white
+                    RadialGradient(
+                        colors: [Color(red: 0, green: 218/255, blue: 195/255).opacity(0.15), Color.clear],
+                        center: UnitPoint(x: 0.2, y: 0.1),
+                        startRadius: 0,
+                        endRadius: 400
+                    )
+                    RadialGradient(
+                        colors: [Color(red: 0, green: 145/255, blue: 1.0).opacity(0.20), Color.clear],
+                        center: UnitPoint(x: 0.8, y: 0.8),
+                        startRadius: 0,
+                        endRadius: 400
+                    )
+                }
+                .ignoresSafeArea()
+            )
             .navigationBarHidden(true)
+        }
+        // Date picker sheet
+        .sheet(isPresented: $showDatePicker) {
+            VStack(spacing: 0) {
+                HStack {
+                    Text("Select Date")
+                        .font(.headline)
+                    Spacer()
+                    Button("Done") { showDatePicker = false }
+                        .fontWeight(.semibold)
+                }
+                .padding()
+                DatePicker("", selection: $selectedDate, displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .padding(.horizontal)
+            }
+            .presentationDetents([.medium])
+        }
+        // Fetch only when the sheet closes (Done button or swipe-dismiss),
+        // not on every date tap inside the picker.
+        .onChange(of: showDatePicker) { _, isShowing in
+            if !isShowing { Task { await fetchReminders() } }
+        }
+        .task {
+            await fetchElders()
+            // Give the elder selector one render pass to lay out before the
+            // tutorial tries to spotlight it.
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            tutorialManager.startChildTutorialIfNeeded(appState: appState)
+        }
+    }
+
+    // MARK: - Data
+
+    private func fetchElders() async {
+        guard let token = appState.token else { return }
+        isLoading = true
+        do {
+            let decoded = try await ReminderRepository.fetchElders(token: token)
+            await MainActor.run {
+                elders = decoded
+                if selectedElderId == nil { selectedElderId = decoded.first?.id }
+                isLoading = false
+            }
+            await fetchReminders()
+        } catch {
+            await MainActor.run { isLoading = false }
+        }
+    }
+
+    private func fetchReminders() async {
+        guard let token = appState.token, let elderId = selectedElderId else { return }
+        await MainActor.run { isLoading = true }
+        do {
+            let decoded = try await ReminderRepository.fetchReminders(elderId: elderId, date: selectedDate, token: token)
+            await MainActor.run { reminders = decoded; isLoading = false }
+        } catch {
+            await MainActor.run { isLoading = false }
         }
     }
 }
 
-// MARK: - Dashboard Reminder Row
+// MARK: - Dashboard Reminder Row — same design, uses APIReminder
 
 struct DashboardReminderRow: View {
-    let reminder: Reminder
+    let reminder: APIReminder
 
-    var timeString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH.mm"
-        return formatter.string(from: reminder.date)
-    }
+    var timeString: String { reminder.timesText }
 
     var body: some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
-                    .frame(width: 48, height: 48)
-                Text(reminder.imageName ?? "💊")
-                    .font(.title3)
-            }
+            ReminderImageView(imageName: reminder.imageName, size: 48, cornerRadius: 12)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(reminder.title)
@@ -117,40 +228,37 @@ struct DashboardReminderRow: View {
     }
 }
 
-// MARK: - Status Badge
+// MARK: - Status Badge — circular progress matching Image 4
 
 struct StatusBadgeView: View {
-    let reminder: Reminder
+    let reminder: APIReminder
 
     var body: some View {
-        if reminder.isCompleted && reminder.totalCount == 1 {
+        let done = reminder.completedCount
+        let total = max(reminder.totalCount, 1)
+        let complete = reminder.isCompleted || done >= total
+
+        if complete {
+            // Blue filled circle with checkmark
             ZStack {
                 Circle()
                     .fill(Color.blue)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 36, height: 36)
                 Image(systemName: "checkmark")
                     .font(.caption)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
             }
-        } else if reminder.totalCount > 1 {
+        } else {
+            // Circle outline: blue if any progress, gray if none
             ZStack {
                 Circle()
-                    .stroke(Color.blue, lineWidth: 1.5)
-                    .frame(width: 36, height: 36)
-                Text("\(reminder.completedCount)/\(reminder.totalCount)")
+                    .stroke(done > 0 ? Color.blue : Color(.systemGray4), lineWidth: 1.5)
+                    .frame(width: 40, height: 40)
+                Text("\(done)/\(total)")
                     .font(.caption2)
                     .fontWeight(.semibold)
-                    .foregroundColor(.blue)
-            }
-        } else {
-            ZStack {
-                Circle()
-                    .stroke(Color(.systemGray4), lineWidth: 1.5)
-                    .frame(width: 32, height: 32)
-                Text("\(reminder.completedCount)/\(reminder.totalCount)")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(done > 0 ? .blue : .secondary)
             }
         }
     }

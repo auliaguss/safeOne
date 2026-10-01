@@ -1,8 +1,15 @@
+// OngoingCallView.swift
 import SwiftUI
 
 struct OngoingCallView: View {
     var isElder: Bool = false
+    var callId: String
+    var callDuration: Int = 0
+
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appState: AppState
+    @State private var showSOS = false
+    @State private var isEndingCall = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -11,83 +18,79 @@ struct OngoingCallView: View {
                 HStack {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.primary)
                         .frame(width: 44, height: 44)
                         .background(.ultraThinMaterial)
                         .clipShape(Circle())
                         .padding(.leading, 16)
-                    
-                        .onTapGesture {
-                            dismiss()
-                        }
+                        .onTapGesture { dismiss() }
                     Spacer()
-    
                     VStack(spacing: 2) {
                         Text("Emergency Call")
                             .font(.system(size: 17, weight: .semibold))
-                        Text("0:30")
+                        Text(formatTime(callDuration))
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                     }
-                    
                     Spacer()
                     Image(systemName: "arrow.down.right.and.arrow.up.left")
                         .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.primary)
                         .frame(width: 44, height: 44)
                         .background(.ultraThinMaterial)
                         .clipShape(Circle())
                         .padding(.trailing, 16)
-                        .onTapGesture {
-                            dismiss()
-                        }
-
+                        .onTapGesture { dismiss() }
                 }
             }
             .frame(height: 44)
             .padding(.top, 4)
             .padding(.bottom, 8)
 
-            // Main area
+            // Video area
             ZStack {
                 LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.933, green: 1.0, blue: 0.988),
-                        Color(red: 0.741, green: 0.925, blue: 1.0)
-                    ]),
-                    startPoint: UnitPoint(x: 0.37, y: 0.02),
-                    endPoint: UnitPoint(x: 0.63, y: 0.98)
+                    colors: [Color(red: 0.933, green: 1.0, blue: 0.988),
+                             Color(red: 0.741, green: 0.925, blue: 1.0)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
-
-                Image(isElder ? "avatar_child" : "avatar_elder")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 200, height: 200)
+                Image(systemName: isElder ? "person.fill" : "person.fill")
+                    .font(.system(size: 100))
+                    .foregroundColor(.blue.opacity(0.4))
             }
             .clipShape(RoundedRectangle(cornerRadius: 24))
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
 
-            // Bottom bar
+            // Bottom buttons
             HStack {
                 Spacer()
 
-                Image(systemName: "phone.down.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(.white)
-                    .frame(width: 64, height: 64)
-                    .background(Color.red)
-                    .clipShape(Circle())
+                // End call
+                Button {
+                    Task { await endCall() }
+                } label: {
+                    Image(systemName: "phone.down.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.white)
+                        .frame(width: 64, height: 64)
+                        .background(Color.red)
+                        .clipShape(Circle())
+                }
 
                 if !isElder {
                     Spacer()
-
-                    Text("SOS")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 64, height: 64)
-                        .background(Color.gray)
-                        .clipShape(Circle())
+                    // SOS button
+                    Button { showSOS = true } label: {
+                        Text("SOS")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 64, height: 64)
+                            .background(Color.orange)
+                            .clipShape(Circle())
+                    }
+                    .sheet(isPresented: $showSOS) {
+                        SOSContactsView()
+                    }
                 }
 
                 Spacer()
@@ -96,13 +99,27 @@ struct OngoingCallView: View {
             .background(Color(UIColor.systemGray6))
         }
         .ignoresSafeArea(edges: .bottom)
+        .onChange(of: callDuration) { duration in
+            if duration >= AppConfig.maximumCallDurationInSeconds {
+                Task { await endCall() }
+            }
+        }
     }
-}
 
-#Preview("Child view") {
-    OngoingCallView(isElder: false)
-}
+    @MainActor
+    private func endCall() async {
+        guard !isEndingCall else { return }
+        isEndingCall = true
 
-#Preview("Elder view") {
-    OngoingCallView(isElder: true)
+        AgoraManager.shared.leaveChannel()
+        try? await CallService.shared.endCall(
+            callId: callId,
+            token: appState.authToken
+        )
+        dismiss()
+    }
+
+    private func formatTime(_ seconds: Int) -> String {
+        String(format: "%02d:%02d", seconds / 60, seconds % 60)
+    }
 }

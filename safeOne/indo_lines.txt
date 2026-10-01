@@ -1,0 +1,132 @@
+./safeOneApp.swift:34: // user ke ContentView (Child) atau ElderContentView berdasarkan data di backend.
+./safeOneApp.swift:53: // LAYER 3: GLOBAL OVERLAY PANGGILAN MASUK
+./safeOneApp.swift:71: // Memberikan animasi halus saat layar panggilan masuk/keluar
+./safeOneApp.swift:75: // data panggilan bisa langsung memperbarui state incomingCall secara global.
+./PageView/SetupProfileView.swift:2: //  SetupProfileView.swift
+./PageView/SetupProfileView.swift:11: struct SetupProfileView: View {
+./PageView/SetupProfileView.swift:64: Text("your profile")
+./PageView/SetupProfileView.swift:82: // Grid Avatar Pilihan
+./PageView/SetupProfileView.swift:84: ForEach(avatarOptions, id: \.self) { emoji in
+./PageView/SetupProfileView.swift:85: Text(emoji)
+./PageView/SetupProfileView.swift:89: selectedAvatar == emoji
+./PageView/SetupProfileView.swift:96: selectedAvatar == emoji ? Color.blue : Color.clear,
+./PageView/SetupProfileView.swift:100: .onTapGesture { selectedAvatar = emoji }
+./PageView/SetupProfileView.swift:127: Task { await saveProfile() }
+./PageView/SetupProfileView.swift:163: private func saveProfile() async {
+./PageView/SetupProfileView.swift:222: SetupProfileView()
+./PageView/Onboarding.swift:16: @State private var navigateToSetupProfile = false
+./PageView/Onboarding.swift:64: // Emojis: 1 putaran per 8 detik (berlawanan jarum jam)
+./PageView/Onboarding.swift:65: let emojiAngle = -(t / 8).truncatingRemainder(dividingBy: 1) * 2 * .pi
+./PageView/Onboarding.swift:68: let emojiRadius: CGFloat = 250
+./PageView/Onboarding.swift:70: let emojis: [(String, Double)] = [
+./PageView/Onboarding.swift:115: // ── Emojis — orbit ring luar, berlawanan arah ──
+./PageView/Onboarding.swift:116: ForEach(emojis.indices, id: \.self) { i in
+./PageView/Onboarding.swift:117: let angle = emojiAngle + emojis[i].1
+./PageView/Onboarding.swift:118: Text(emojis[i].0)
+./PageView/Onboarding.swift:121: x: emojiRadius * cos(angle),
+./PageView/Onboarding.swift:122: y: emojiRadius * sin(angle)
+./PageView/Onboarding.swift:131: // AREA BAWAH: Loading Pengecekan atau Tampilan Tombol
+./PageView/Onboarding.swift:184: .navigationDestination(isPresented: $navigateToSetupProfile) {
+./PageView/Onboarding.swift:185: SetupProfileView()
+./PageView/Onboarding.swift:230: let isProfileComplete = !(userName.isEmpty) && !(userDict["avatar"] as? String ?? "").isEmpty
+./PageView/Onboarding.swift:232: if isProfileComplete {
+./PageView/Onboarding.swift:239: navigateToSetupProfile = true
+./PageView/Onboarding.swift:244: // Jika belum ada, hilangkan loading dan munculkan tombol
+./PageView/Onboarding.swift:258: // MARK: - Dev Login (Hanya dipanggil jika user belum ada & menekan tombol)
+./PageView/Onboarding.swift:318: navigateToSetupProfile = true  // ← selalu ke setup profile dulu
+./PageView/Elder/ElderReminderModalView.swift:119: // Image / Emoji circle
+./PageView/Elder/ElderDashboardSubview.swift:25: Text("Tidak ada reminder hari ini")
+./PageView/Elder/ElderCallingView.swift:14: @State private var waitingSeconds = 0  // ← tambah di atas body
+./PageView/Elder/ElderCallingView.swift:34: Text("Menunggu caregiver...")
+./PageView/Elder/ElderCallingView.swift:213: // Jika backend bilang call sudah ended → tutup layar elder
+./PageView/Elder/ElderCallingView.swift:214: if status == "ended" || status == "missed" || status == "cancelled" || status == "declined" {  // ← tambah "missed"
+./PageView/Elder/ElderProfileView.swift:3: struct ElderProfileView: View {
+./PageView/Elder/ElderProfileView.swift:10: @State private var showEditProfile = false
+./PageView/Elder/ElderProfileView.swift:23: // Profile Header
+./PageView/Elder/ElderProfileView.swift:24: // Profile Header — ganti Section yang ada
+./PageView/Elder/ElderProfileView.swift:54: .onTapGesture { showEditProfile = true }
+./PageView/Elder/ElderProfileView.swift:151: .navigationTitle("Profile")
+./PageView/Elder/ElderProfileView.swift:157: .sheet(isPresented: $showEditProfile) {
+./PageView/Elder/ElderProfileView.swift:158: ElderEditProfileView()
+./PageView/Elder/ElderProfileView.swift:212: // MARK: - Edit Profile View
+./PageView/Elder/ElderProfileView.swift:213: struct ElderEditProfileView: View {
+./PageView/Elder/ElderProfileView.swift:238: ForEach(avatarOptions, id: \.self) { emoji in
+./PageView/Elder/ElderProfileView.swift:239: Text(emoji)
+./PageView/Elder/ElderProfileView.swift:242: .background(avatar == emoji ? Color.blue.opacity(0.2) : Color(.systemGray6))
+./PageView/Elder/ElderProfileView.swift:246: .stroke(avatar == emoji ? Color.blue : Color.clear, lineWidth: 2)
+./PageView/Elder/ElderProfileView.swift:248: .onTapGesture { avatar = emoji }
+./PageView/Elder/ElderProfileView.swift:268: .navigationTitle("Edit Profile")
+./PageView/Elder/ElderProfileView.swift:276: Task { await saveProfile() }
+./PageView/Elder/ElderProfileView.swift:294: private func saveProfile() async {
+./PageView/Elder/ElderProfileView.swift:416: ElderProfileView()
+./PageView/Elder/ElderReminderFullScreenView.swift:174: // Image / Emoji
+./PageView/Elder/ElderContentView.swift:16: Tab("Profile", systemImage: "person") {
+./PageView/Elder/ElderContentView.swift:17: ElderProfileView()
+./PageView/Call/VoIPManager.swift:22: private var pendingVoipToken: String? = nil  // ← tambah ini
+./PageView/Call/VoIPManager.swift:71: print("⏳ Menunggu user login untuk menyimpan token VoIP...")
+./PageView/Call/VoIPManager.swift:72: pendingVoipToken = token  // ← simpan dulu
+./PageView/Call/VoIPManager.swift:94: print("✅ VoIP Token sukses disimpan ke Database Backend!")
+./PageView/Call/VoIPManager.swift:96: print("⚠️ JWT invalid, simpan untuk retry setelah login")
+./PageView/Call/VoIPManager.swift:97: pendingVoipToken = token  // ← tambah ini
+./PageView/Call/VoIPManager.swift:183: print("📲 User answer dari CallKit — buka layar Terima/Tolak")
+./PageView/Call/VoIPManager.swift:234: // Setup Agora engine dan simpan sebagai pending join
+./PageView/Call/VoIPManager.swift:242: print("✅ Agora siap — menunggu didActivate dari CallKit")
+./PageView/Call/VoIPManager.swift:250: print("📴 Panggilan diakhiri dari CallKit")
+./PageView/Call/CallService.swift:25: print("📡 Hitting: \(url)")           // ← tambahkan
+./PageView/Call/CallService.swift:26: print("🔑 Header token: \(token)")    // ← tambahkan
+./PageView/Call/VideoView.swift:9: // View untuk menampilkan video stream (local atau remote)
+./PageView/Call/IncomingCallView.swift:38: Text("Menunggu video elder...")
+./PageView/Call/IncomingCallView.swift:82: // ── STATE 1: Layar Incoming Call (Terima/Tolak) ──
+./PageView/Call/IncomingCallView.swift:121: Text("Tolak").font(.caption).foregroundColor(.secondary)
+./PageView/Call/IncomingCallView.swift:126: print("🔴 TOMBOL TERIMA DITEKAN")
+./PageView/Call/IncomingCallView.swift:136: Text("Terima").font(.caption).foregroundColor(.secondary)
+./PageView/Call/IncomingCallView.swift:160: // Failsafe: tutup jika elder tidak muncul dalam 30 detik
+./PageView/Call/IncomingCallView.swift:247: VoIPManager.shared.reportCallEnded()  // ← tambah ini
+./PageView/Call/IncomingCallView.swift:268: VoIPManager.shared.reportCallEnded()  // ← tambah ini
+./PageView/Call/SOSContactsView.swift:46: .navigationTitle("Hubungi Bantuan")
+./PageView/Call/SOSContactsView.swift:50: Button("Tutup") { dismiss() }
+./PageView/Children/ReminderDetailView.swift:40: // Image / Emoji
+./PageView/Children/ProfileView.swift:2: //  ProfileView.swift
+./PageView/Children/ProfileView.swift:8: // MARK: - Profile View
+./PageView/Children/ProfileView.swift:9: struct ProfileView: View {
+./PageView/Children/ProfileView.swift:12: @State private var showEditProfile = false
+./PageView/Children/ProfileView.swift:18: // Profile Header — tap untuk edit
+./PageView/Children/ProfileView.swift:48: .onTapGesture { showEditProfile = true }
+./PageView/Children/ProfileView.swift:104: .navigationTitle("Profile")
+./PageView/Children/ProfileView.swift:106: .sheet(isPresented: $showEditProfile) {
+./PageView/Children/ProfileView.swift:107: EditProfileView()
+./PageView/Children/ProfileView.swift:114: // MARK: - Edit Profile View
+./PageView/Children/ProfileView.swift:115: struct EditProfileView: View {
+./PageView/Children/ProfileView.swift:138: ForEach(avatarOptions, id: \.self) { emoji in
+./PageView/Children/ProfileView.swift:139: Text(emoji)
+./PageView/Children/ProfileView.swift:142: .background(avatar == emoji ? Color.blue.opacity(0.2) : Color(.systemGray6))
+./PageView/Children/ProfileView.swift:144: .overlay(Circle().stroke(avatar == emoji ? Color.blue : Color.clear, lineWidth: 2))
+./PageView/Children/ProfileView.swift:145: .onTapGesture { avatar = emoji }
+./PageView/Children/ProfileView.swift:161: .navigationTitle("Edit Profile")
+./PageView/Children/ProfileView.swift:169: Task { await saveProfile() }
+./PageView/Children/ProfileView.swift:183: private func saveProfile() async {
+./PageView/Children/ProfileView.swift:243: Text("Belum ada elder yang terhubung")
+./PageView/Children/AddReminderView.swift:37: @State private var selectedEmoji: String = "💊"
+./PageView/Children/AddReminderView.swift:47: let emojiOptions: [String] = ["💊", "🩺", "🏃", "🍎", "💉", "🩹", "🧘", "🚶"]
+./PageView/Children/AddReminderView.swift:103: // --- Photo / Emoji Picker ---
+./PageView/Children/AddReminderView.swift:117: Text(selectedEmoji)
+./PageView/Children/AddReminderView.swift:135: ForEach(emojiOptions, id: \.self) { emoji in
+./PageView/Children/AddReminderView.swift:137: selectedEmoji = emoji
+./PageView/Children/AddReminderView.swift:141: Text(emoji)
+./PageView/Children/AddReminderView.swift:145: Circle().fill(!usePhoto && selectedEmoji == emoji
+./PageView/Children/AddReminderView.swift:155: Text(usePhoto ? "Foto dari galeri" : "Pilih emoji atau foto")
+./PageView/Children/AddReminderView.swift:435: selectedEmoji = "💊"
+./PageView/Children/AddReminderView.swift:437: selectedEmoji = r.imageName ?? "💊"
+./PageView/Children/AddReminderView.swift:517: errorMessage = "Pilih elder terlebih dahulu"
+./PageView/Children/AddReminderView.swift:557: "imageName": usePhoto ? encodePhoto() : selectedEmoji
+./PageView/Children/DataPrivacyView.swift:76: PrivacyRow(label: "Edit profile", detail: "Anytime from Profile tab")
+./PageView/Children/ContentView.swift:22: Tab("Profile", systemImage: "person") {
+./PageView/Children/ContentView.swift:23: ProfileView()
+./PageView/Children/ContentView.swift:37: // Matikan polling jika keluar dari ContentView
+./Components/ReminderImageView.swift:8: /// Displays a reminder's image: decodes base64 data URIs, loads http URLs, or shows an emoji.
+./Model/AppState.swift:252: // Hanya set jika belum ada call
+./Model/AppState.swift:263: // ← HAPUS blok else — jangan pernah nil-kan dari sini
+./Model/AgoraManager.swift:57: option.channelProfile = .communication
+./Model/AgoraManager.swift:59: // Simpan hasil eksekusinya ke dalam variabel 'result'
+./Model/AgoraManager.swift:69: // Cek apakah langsung ditolak oleh SDK
+./Model/AgoraManager.swift:72: print("❌ GAGAL MASUK ROOM! Token Ditolak. Kode Error Agora: \(result)")

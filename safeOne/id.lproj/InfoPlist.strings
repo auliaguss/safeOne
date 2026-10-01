@@ -1,0 +1,3 @@
+"NSMicrophoneUsageDescription" = "HeartH membutuhkan mikrofon untuk video call darurat.";
+"NSCameraUsageDescription" = "HeartH membutuhkan kamera untuk video call darurat.";
+"NSPhotoLibraryUsageDescription" = "HeartH membutuhkan akses galeri untuk foto pengingat.";

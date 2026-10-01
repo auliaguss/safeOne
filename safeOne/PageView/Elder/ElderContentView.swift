@@ -9,15 +9,16 @@ struct ElderContentView: View {
     @EnvironmentObject var appState: AppState
     
     var body: some View {
-        TabView {
-            Tab("Dashboard", systemImage: "checklist") {
+        TabView(selection: $appState.elderTabSelection) {
+            Tab(appState.text("Beranda", "Dashboard"), systemImage: "checklist", value: ElderTab.dashboard) {
                 ElderDashboard()
             }
-            Tab("Profile", systemImage: "person") {
+            Tab(appState.text("Profil", "Profile"), systemImage: "person", value: ElderTab.profile) {
                 ElderProfileView()
             }
         }
         .accentColor(.blue)
+        .navigationBarBackButtonHidden(true)
     }
 }
 #Preview {

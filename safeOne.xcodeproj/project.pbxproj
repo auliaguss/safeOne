@@ -6,13 +6,142 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A142BD022FD040840000D46F /* AIAEC in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD012FD040840000D46F /* AIAEC */; };
+		A142BD042FD040840000D46F /* AIAECLL in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD032FD040840000D46F /* AIAECLL */; };
+		A142BD062FD040840000D46F /* AINS in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD052FD040840000D46F /* AINS */; };
+		A142BD082FD040840000D46F /* AINSLL in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD072FD040840000D46F /* AINSLL */; };
+		A142BD0A2FD040840000D46F /* AudioBeauty in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD092FD040840000D46F /* AudioBeauty */; };
+		A142BD0C2FD040840000D46F /* ClearVision in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD0B2FD040840000D46F /* ClearVision */; };
+		A142BD0E2FD040840000D46F /* ContentInspect in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD0D2FD040840000D46F /* ContentInspect */; };
+		A142BD102FD040840000D46F /* FaceCapture in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD0F2FD040840000D46F /* FaceCapture */; };
+		A142BD122FD040840000D46F /* FaceDetection in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD112FD040840000D46F /* FaceDetection */; };
+		A142BD142FD040840000D46F /* LipSync in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD132FD040840000D46F /* LipSync */; };
+		A142BD162FD040840000D46F /* ReplayKit in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD152FD040840000D46F /* ReplayKit */; };
+		A142BD182FD040840000D46F /* RtcBasic in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD172FD040840000D46F /* RtcBasic */; };
+		A142BD1A2FD040840000D46F /* SpatialAudio in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD192FD040840000D46F /* SpatialAudio */; };
+		A142BD1C2FD040840000D46F /* VQA in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD1B2FD040840000D46F /* VQA */; };
+		A142BD1E2FD040840000D46F /* VideoAv1CodecEnc in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD1D2FD040840000D46F /* VideoAv1CodecEnc */; };
+		A142BD202FD040840000D46F /* VideoCodecEnc in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD1F2FD040840000D46F /* VideoCodecEnc */; };
+		A142BD222FD040840000D46F /* VirtualBackground in Frameworks */ = {isa = PBXBuildFile; productRef = A142BD212FD040840000D46F /* VirtualBackground */; };
+		A1F1459A303050FA00435DFC /* ElderDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14588303050FA00435DFC /* ElderDashboard.swift */; };
+		A1F1459B303050FA00435DFC /* DataPrivacyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14581303050FA00435DFC /* DataPrivacyView.swift */; };
+		A1F1459C303050FA00435DFC /* ElderReminderFullScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1458B303050FA00435DFC /* ElderReminderFullScreenView.swift */; };
+		A1F1459D303050FA00435DFC /* CallService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14576303050FA00435DFC /* CallService.swift */; };
+		A1F1459E303050FA00435DFC /* Elder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14570303050FA00435DFC /* Elder.swift */; };
+		A1F1459F303050FA00435DFC /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14582303050FA00435DFC /* ProfileView.swift */; };
+		A1F145A0303050FA00435DFC /* ElderCallingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14586303050FA00435DFC /* ElderCallingView.swift */; };
+		A1F145A1303050FA00435DFC /* ReminderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14573303050FA00435DFC /* ReminderRepository.swift */; };
+		A1F145A2303050FA00435DFC /* VoIPManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1457C303050FA00435DFC /* VoIPManager.swift */; };
+		A1F145A3303050FA00435DFC /* ElderProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1458A303050FA00435DFC /* ElderProfileView.swift */; };
+		A1F145A4303050FA00435DFC /* ElderContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14587303050FA00435DFC /* ElderContentView.swift */; };
+		A1F145A5303050FA00435DFC /* AddReminderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1457E303050FA00435DFC /* AddReminderView.swift */; };
+		A1F145A6303050FA00435DFC /* VideoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1457B303050FA00435DFC /* VideoView.swift */; };
+		A1F145A7303050FA00435DFC /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14571303050FA00435DFC /* NotificationManager.swift */; };
+		A1F145A8303050FA00435DFC /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1456C303050FA00435DFC /* AppConfig.swift */; };
+		A1F145A9303050FA00435DFC /* safeOneApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14598303050FA00435DFC /* safeOneApp.swift */; };
+		A1F145AA303050FA00435DFC /* OngoingCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14578303050FA00435DFC /* OngoingCallView.swift */; };
+		A1F145AB303050FA00435DFC /* Sharedcomponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14569303050FA00435DFC /* Sharedcomponents.swift */; };
+		A1F145AC303050FA00435DFC /* SetupProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14590303050FA00435DFC /* SetupProfileView.swift */; };
+		A1F145AD303050FA00435DFC /* ReminderViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14574303050FA00435DFC /* ReminderViewModel.swift */; };
+		A1F145AE303050FA00435DFC /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1456E303050FA00435DFC /* AppState.swift */; };
+		A1F145AF303050FA00435DFC /* ReminderDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14583303050FA00435DFC /* ReminderDetailView.swift */; };
+		A1F145B0303050FA00435DFC /* CallModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1456F303050FA00435DFC /* CallModel.swift */; };
+		A1F145B1303050FA00435DFC /* ElderDashboardSubview.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14589303050FA00435DFC /* ElderDashboardSubview.swift */; };
+		A1F145B2303050FA00435DFC /* ReminderImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14592303050FA00435DFC /* ReminderImageView.swift */; };
+		A1F145B3303050FA00435DFC /* HealthInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1458D303050FA00435DFC /* HealthInfoView.swift */; };
+		A1F145B4303050FA00435DFC /* ElderReminderModalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1458C303050FA00435DFC /* ElderReminderModalView.swift */; };
+		A1F145B5303050FA00435DFC /* ReminderModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14572303050FA00435DFC /* ReminderModel.swift */; };
+		A1F145B6303050FA00435DFC /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14580303050FA00435DFC /* DashboardView.swift */; };
+		A1F145B7303050FA00435DFC /* IncomingCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14577303050FA00435DFC /* IncomingCallView.swift */; };
+		A1F145B8303050FA00435DFC /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1458F303050FA00435DFC /* Onboarding.swift */; };
+		A1F145B9303050FA00435DFC /* SOSContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1457A303050FA00435DFC /* SOSContactsView.swift */; };
+		A1F145BA303050FA00435DFC /* AgoraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1456B303050FA00435DFC /* AgoraManager.swift */; };
+		A1F145BB303050FA00435DFC /* OutgoingCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14579303050FA00435DFC /* OutgoingCallView.swift */; };
+		A1F145BC303050FA00435DFC /* Color+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14568303050FA00435DFC /* Color+Extension.swift */; };
+		A1F145BD303050FA00435DFC /* ReminderListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F14584303050FA00435DFC /* ReminderListView.swift */; };
+		A1F145BE303050FA00435DFC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1456D303050FA00435DFC /* AppDelegate.swift */; };
+		A1F145BF303050FA00435DFC /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F1457F303050FA00435DFC /* ContentView.swift */; };
+		A1F145C1303050FA00435DFC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1F14594303050FA00435DFC /* Assets.xcassets */; };
+		A1F145C2303050FA00435DFC /* Config.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = A1F14595303050FA00435DFC /* Config.xcconfig */; };
+		BC0000032FD040840000D46F /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = BC0000022FD040840000D46F /* RevenueCat */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		EE0005002FD040840000D46F /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
-		219E090D2FBD7FC000118AB9 /* safeOne.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = safeOne.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		219E090D2FBD7FC000118AB9 /* HearH.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HearH.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1F14568303050FA00435DFC /* Color+Extension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Extension.swift"; sourceTree = "<group>"; };
+		A1F14569303050FA00435DFC /* Sharedcomponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sharedcomponents.swift; sourceTree = "<group>"; };
+		A1F1456B303050FA00435DFC /* AgoraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgoraManager.swift; sourceTree = "<group>"; };
+		A1F1456C303050FA00435DFC /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		A1F1456D303050FA00435DFC /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A1F1456E303050FA00435DFC /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		A1F1456F303050FA00435DFC /* CallModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallModel.swift; sourceTree = "<group>"; };
+		A1F14570303050FA00435DFC /* Elder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Elder.swift; sourceTree = "<group>"; };
+		A1F14571303050FA00435DFC /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		A1F14572303050FA00435DFC /* ReminderModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderModel.swift; sourceTree = "<group>"; };
+		A1F14573303050FA00435DFC /* ReminderRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderRepository.swift; sourceTree = "<group>"; };
+		A1F14574303050FA00435DFC /* ReminderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderViewModel.swift; sourceTree = "<group>"; };
+		A1F14576303050FA00435DFC /* CallService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallService.swift; sourceTree = "<group>"; };
+		A1F14577303050FA00435DFC /* IncomingCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingCallView.swift; sourceTree = "<group>"; };
+		A1F14578303050FA00435DFC /* OngoingCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OngoingCallView.swift; sourceTree = "<group>"; };
+		A1F14579303050FA00435DFC /* OutgoingCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutgoingCallView.swift; sourceTree = "<group>"; };
+		A1F1457A303050FA00435DFC /* SOSContactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOSContactsView.swift; sourceTree = "<group>"; };
+		A1F1457B303050FA00435DFC /* VideoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoView.swift; sourceTree = "<group>"; };
+		A1F1457C303050FA00435DFC /* VoIPManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoIPManager.swift; sourceTree = "<group>"; };
+		A1F1457E303050FA00435DFC /* AddReminderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddReminderView.swift; sourceTree = "<group>"; };
+		A1F1457F303050FA00435DFC /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A1F14580303050FA00435DFC /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		A1F14581303050FA00435DFC /* DataPrivacyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataPrivacyView.swift; sourceTree = "<group>"; };
+		A1F14582303050FA00435DFC /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		A1F14583303050FA00435DFC /* ReminderDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderDetailView.swift; sourceTree = "<group>"; };
+		A1F14584303050FA00435DFC /* ReminderListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderListView.swift; sourceTree = "<group>"; };
+		A1F14586303050FA00435DFC /* ElderCallingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElderCallingView.swift; sourceTree = "<group>"; };
+		A1F14587303050FA00435DFC /* ElderContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElderContentView.swift; sourceTree = "<group>"; };
+		A1F14588303050FA00435DFC /* ElderDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElderDashboard.swift; sourceTree = "<group>"; };
+		A1F14589303050FA00435DFC /* ElderDashboardSubview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElderDashboardSubview.swift; sourceTree = "<group>"; };
+		A1F1458A303050FA00435DFC /* ElderProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElderProfileView.swift; sourceTree = "<group>"; };
+		A1F1458B303050FA00435DFC /* ElderReminderFullScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElderReminderFullScreenView.swift; sourceTree = "<group>"; };
+		A1F1458C303050FA00435DFC /* ElderReminderModalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElderReminderModalView.swift; sourceTree = "<group>"; };
+		A1F1458D303050FA00435DFC /* HealthInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthInfoView.swift; sourceTree = "<group>"; };
+		A1F1458F303050FA00435DFC /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
+		A1F14590303050FA00435DFC /* SetupProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupProfileView.swift; sourceTree = "<group>"; };
+		A1F14592303050FA00435DFC /* ReminderImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderImageView.swift; sourceTree = "<group>"; };
+		A1F14594303050FA00435DFC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1F14595303050FA00435DFC /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		A1F14596303050FA00435DFC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A1F14597303050FA00435DFC /* safeOne.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = safeOne.entitlements; sourceTree = "<group>"; };
+		A1F14598303050FA00435DFC /* safeOneApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = safeOneApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A142BD2D2FD05D860000D46F /* Exceptions for "safeOne" folder in "Healder" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 219E090C2FBD7FC000118AB9 /* Healder */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		219E090F2FBD7FC000118AB9 /* safeOne */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A142BD2D2FD05D860000D46F /* Exceptions for "safeOne" folder in "Healder" target */,
+			);
 			path = safeOne;
 			sourceTree = "<group>";
 		};
@@ -23,6 +152,24 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BC0000032FD040840000D46F /* RevenueCat in Frameworks */,
+				A142BD162FD040840000D46F /* ReplayKit in Frameworks */,
+				A142BD0C2FD040840000D46F /* ClearVision in Frameworks */,
+				A142BD042FD040840000D46F /* AIAECLL in Frameworks */,
+				A142BD1A2FD040840000D46F /* SpatialAudio in Frameworks */,
+				A142BD0E2FD040840000D46F /* ContentInspect in Frameworks */,
+				A142BD1C2FD040840000D46F /* VQA in Frameworks */,
+				A142BD122FD040840000D46F /* FaceDetection in Frameworks */,
+				A142BD222FD040840000D46F /* VirtualBackground in Frameworks */,
+				A142BD1E2FD040840000D46F /* VideoAv1CodecEnc in Frameworks */,
+				A142BD202FD040840000D46F /* VideoCodecEnc in Frameworks */,
+				A142BD082FD040840000D46F /* AINSLL in Frameworks */,
+				A142BD022FD040840000D46F /* AIAEC in Frameworks */,
+				A142BD0A2FD040840000D46F /* AudioBeauty in Frameworks */,
+				A142BD142FD040840000D46F /* LipSync in Frameworks */,
+				A142BD102FD040840000D46F /* FaceCapture in Frameworks */,
+				A142BD062FD040840000D46F /* AINS in Frameworks */,
+				A142BD182FD040840000D46F /* RtcBasic in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -34,27 +181,134 @@
 			children = (
 				219E090F2FBD7FC000118AB9 /* safeOne */,
 				219E090E2FBD7FC000118AB9 /* Products */,
+				A1F14599303050FA00435DFC /* safeOne */,
 			);
 			sourceTree = "<group>";
 		};
 		219E090E2FBD7FC000118AB9 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				219E090D2FBD7FC000118AB9 /* safeOne.app */,
+				219E090D2FBD7FC000118AB9 /* HearH.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A1F1456A303050FA00435DFC /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A1F14569303050FA00435DFC /* Sharedcomponents.swift */,
+				A1F14592303050FA00435DFC /* ReminderImageView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		A1F14575303050FA00435DFC /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				A1F1456B303050FA00435DFC /* AgoraManager.swift */,
+				A1F1456C303050FA00435DFC /* AppConfig.swift */,
+				A1F1456D303050FA00435DFC /* AppDelegate.swift */,
+				A1F1456E303050FA00435DFC /* AppState.swift */,
+				A1F1456F303050FA00435DFC /* CallModel.swift */,
+				A1F14570303050FA00435DFC /* Elder.swift */,
+				A1F14571303050FA00435DFC /* NotificationManager.swift */,
+				A1F14572303050FA00435DFC /* ReminderModel.swift */,
+				A1F14573303050FA00435DFC /* ReminderRepository.swift */,
+				A1F14574303050FA00435DFC /* ReminderViewModel.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		A1F1457D303050FA00435DFC /* Call */ = {
+			isa = PBXGroup;
+			children = (
+				A1F14576303050FA00435DFC /* CallService.swift */,
+				A1F14577303050FA00435DFC /* IncomingCallView.swift */,
+				A1F14578303050FA00435DFC /* OngoingCallView.swift */,
+				A1F14579303050FA00435DFC /* OutgoingCallView.swift */,
+				A1F1457A303050FA00435DFC /* SOSContactsView.swift */,
+				A1F1457B303050FA00435DFC /* VideoView.swift */,
+				A1F1457C303050FA00435DFC /* VoIPManager.swift */,
+			);
+			path = Call;
+			sourceTree = "<group>";
+		};
+		A1F14585303050FA00435DFC /* Children */ = {
+			isa = PBXGroup;
+			children = (
+				A1F1457E303050FA00435DFC /* AddReminderView.swift */,
+				A1F1457F303050FA00435DFC /* ContentView.swift */,
+				A1F14580303050FA00435DFC /* DashboardView.swift */,
+				A1F14581303050FA00435DFC /* DataPrivacyView.swift */,
+				A1F14582303050FA00435DFC /* ProfileView.swift */,
+				A1F14583303050FA00435DFC /* ReminderDetailView.swift */,
+				A1F14584303050FA00435DFC /* ReminderListView.swift */,
+			);
+			path = Children;
+			sourceTree = "<group>";
+		};
+		A1F1458E303050FA00435DFC /* Elder */ = {
+			isa = PBXGroup;
+			children = (
+				A1F14586303050FA00435DFC /* ElderCallingView.swift */,
+				A1F14587303050FA00435DFC /* ElderContentView.swift */,
+				A1F14588303050FA00435DFC /* ElderDashboard.swift */,
+				A1F14589303050FA00435DFC /* ElderDashboardSubview.swift */,
+				A1F1458A303050FA00435DFC /* ElderProfileView.swift */,
+				A1F1458B303050FA00435DFC /* ElderReminderFullScreenView.swift */,
+				A1F1458C303050FA00435DFC /* ElderReminderModalView.swift */,
+				A1F1458D303050FA00435DFC /* HealthInfoView.swift */,
+			);
+			path = Elder;
+			sourceTree = "<group>";
+		};
+		A1F14591303050FA00435DFC /* PageView */ = {
+			isa = PBXGroup;
+			children = (
+				A1F1457D303050FA00435DFC /* Call */,
+				A1F14585303050FA00435DFC /* Children */,
+				A1F1458E303050FA00435DFC /* Elder */,
+				A1F1458F303050FA00435DFC /* Onboarding.swift */,
+				A1F14590303050FA00435DFC /* SetupProfileView.swift */,
+			);
+			path = PageView;
+			sourceTree = "<group>";
+		};
+		A1F14599303050FA00435DFC /* safeOne */ = {
+			isa = PBXGroup;
+			children = (
+				A1F1456A303050FA00435DFC /* Components */,
+				A1F145D0303050FA00435DFC /* Extensions */,
+				A1F14575303050FA00435DFC /* Model */,
+				A1F14591303050FA00435DFC /* PageView */,
+				A1F14594303050FA00435DFC /* Assets.xcassets */,
+				A1F14595303050FA00435DFC /* Config.xcconfig */,
+				A1F14596303050FA00435DFC /* Info.plist */,
+				A1F14597303050FA00435DFC /* safeOne.entitlements */,
+				A1F14598303050FA00435DFC /* safeOneApp.swift */,
+			);
+			path = safeOne;
+			sourceTree = "<group>";
+		};
+		A1F145D0303050FA00435DFC /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				A1F14568303050FA00435DFC /* Color+Extension.swift */,
+			);
+			path = Extensions;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		219E090C2FBD7FC000118AB9 /* safeOne */ = {
+		219E090C2FBD7FC000118AB9 /* Healder */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 219E09182FBD7FC100118AB9 /* Build configuration list for PBXNativeTarget "safeOne" */;
+			buildConfigurationList = 219E09182FBD7FC100118AB9 /* Build configuration list for PBXNativeTarget "Healder" */;
 			buildPhases = (
 				219E09092FBD7FC000118AB9 /* Sources */,
 				219E090A2FBD7FC000118AB9 /* Frameworks */,
 				219E090B2FBD7FC000118AB9 /* Resources */,
+				EE0005002FD040840000D46F /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
@@ -63,11 +317,29 @@
 			fileSystemSynchronizedGroups = (
 				219E090F2FBD7FC000118AB9 /* safeOne */,
 			);
-			name = safeOne;
+			name = Healder;
 			packageProductDependencies = (
+				A142BD012FD040840000D46F /* AIAEC */,
+				A142BD032FD040840000D46F /* AIAECLL */,
+				A142BD052FD040840000D46F /* AINS */,
+				A142BD072FD040840000D46F /* AINSLL */,
+				A142BD092FD040840000D46F /* AudioBeauty */,
+				A142BD0B2FD040840000D46F /* ClearVision */,
+				A142BD0D2FD040840000D46F /* ContentInspect */,
+				A142BD0F2FD040840000D46F /* FaceCapture */,
+				A142BD112FD040840000D46F /* FaceDetection */,
+				A142BD132FD040840000D46F /* LipSync */,
+				A142BD152FD040840000D46F /* ReplayKit */,
+				A142BD172FD040840000D46F /* RtcBasic */,
+				A142BD192FD040840000D46F /* SpatialAudio */,
+				A142BD1B2FD040840000D46F /* VQA */,
+				A142BD1D2FD040840000D46F /* VideoAv1CodecEnc */,
+				A142BD1F2FD040840000D46F /* VideoCodecEnc */,
+				A142BD212FD040840000D46F /* VirtualBackground */,
+				BC0000022FD040840000D46F /* RevenueCat */,
 			);
 			productName = safeOne;
-			productReference = 219E090D2FBD7FC000118AB9 /* safeOne.app */;
+			productReference = 219E090D2FBD7FC000118AB9 /* HearH.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -91,15 +363,20 @@
 			knownRegions = (
 				en,
 				Base,
+				id,
 			);
 			mainGroup = 219E09042FBD7FC000118AB9;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */,
+				BC0000012FD040840000D46F /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 219E090E2FBD7FC000118AB9 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				219E090C2FBD7FC000118AB9 /* safeOne */,
+				219E090C2FBD7FC000118AB9 /* Healder */,
 			);
 		};
 /* End PBXProject section */
@@ -109,6 +386,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1F145C1303050FA00435DFC /* Assets.xcassets in Resources */,
+				A1F145C2303050FA00435DFC /* Config.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -119,6 +398,44 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1F1459A303050FA00435DFC /* ElderDashboard.swift in Sources */,
+				A1F1459B303050FA00435DFC /* DataPrivacyView.swift in Sources */,
+				A1F1459C303050FA00435DFC /* ElderReminderFullScreenView.swift in Sources */,
+				A1F1459D303050FA00435DFC /* CallService.swift in Sources */,
+				A1F1459E303050FA00435DFC /* Elder.swift in Sources */,
+				A1F1459F303050FA00435DFC /* ProfileView.swift in Sources */,
+				A1F145A0303050FA00435DFC /* ElderCallingView.swift in Sources */,
+				A1F145A1303050FA00435DFC /* ReminderRepository.swift in Sources */,
+				A1F145A2303050FA00435DFC /* VoIPManager.swift in Sources */,
+				A1F145A3303050FA00435DFC /* ElderProfileView.swift in Sources */,
+				A1F145A4303050FA00435DFC /* ElderContentView.swift in Sources */,
+				A1F145A5303050FA00435DFC /* AddReminderView.swift in Sources */,
+				A1F145A6303050FA00435DFC /* VideoView.swift in Sources */,
+				A1F145A7303050FA00435DFC /* NotificationManager.swift in Sources */,
+				A1F145A8303050FA00435DFC /* AppConfig.swift in Sources */,
+				A1F145A9303050FA00435DFC /* safeOneApp.swift in Sources */,
+				A1F145AA303050FA00435DFC /* OngoingCallView.swift in Sources */,
+				A1F145AB303050FA00435DFC /* Sharedcomponents.swift in Sources */,
+				A1F145AC303050FA00435DFC /* SetupProfileView.swift in Sources */,
+				A1F145AD303050FA00435DFC /* ReminderViewModel.swift in Sources */,
+				A1F145AE303050FA00435DFC /* AppState.swift in Sources */,
+				A1F145AF303050FA00435DFC /* ReminderDetailView.swift in Sources */,
+				A1F145B0303050FA00435DFC /* CallModel.swift in Sources */,
+				A1F145B1303050FA00435DFC /* ElderDashboardSubview.swift in Sources */,
+				A1F145B2303050FA00435DFC /* ReminderImageView.swift in Sources */,
+				A1F145B3303050FA00435DFC /* HealthInfoView.swift in Sources */,
+				A1F145B4303050FA00435DFC /* ElderReminderModalView.swift in Sources */,
+				A1F145B5303050FA00435DFC /* ReminderModel.swift in Sources */,
+				A1F145B6303050FA00435DFC /* DashboardView.swift in Sources */,
+				A1F145B7303050FA00435DFC /* IncomingCallView.swift in Sources */,
+				A1F145B8303050FA00435DFC /* Onboarding.swift in Sources */,
+				A1F145B9303050FA00435DFC /* SOSContactsView.swift in Sources */,
+				A1F145BA303050FA00435DFC /* AgoraManager.swift in Sources */,
+				A1F145BB303050FA00435DFC /* OutgoingCallView.swift in Sources */,
+				A1F145BC303050FA00435DFC /* Color+Extension.swift in Sources */,
+				A1F145BD303050FA00435DFC /* ReminderListView.swift in Sources */,
+				A1F145BE303050FA00435DFC /* AppDelegate.swift in Sources */,
+				A1F145BF303050FA00435DFC /* ContentView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -127,6 +444,8 @@
 /* Begin XCBuildConfiguration section */
 		219E09162FBD7FC100118AB9 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 219E090F2FBD7FC000118AB9 /* safeOne */;
+			baseConfigurationReferenceRelativePath = Config.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -160,7 +479,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = NTPW7765ND;
+				DEVELOPMENT_TEAM = V7RKC8F8WN;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -191,6 +510,7 @@
 		};
 		219E09172FBD7FC100118AB9 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1F14595303050FA00435DFC /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -224,7 +544,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = NTPW7765ND;
+				DEVELOPMENT_TEAM = V7RKC8F8WN;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -248,65 +568,76 @@
 		};
 		219E09192FBD7FC100118AB9 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 219E090F2FBD7FC000118AB9 /* safeOne */;
+			baseConfigurationReferenceRelativePath = Config.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = safeOne/safeOne.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = NTPW7765ND;
+				DEVELOPMENT_TEAM = V7RKC8F8WN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = safeOne/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Healder;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Aulia.safeOne;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = HearH;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
 		219E091A2FBD7FC100118AB9 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1F14595303050FA00435DFC /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = safeOne/safeOne.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = NTPW7765ND;
+				DEVELOPMENT_TEAM = V7RKC8F8WN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = safeOne/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Healder;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Aulia.safeOne;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = HearH;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -322,7 +653,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		219E09182FBD7FC100118AB9 /* Build configuration list for PBXNativeTarget "safeOne" */ = {
+		219E09182FBD7FC100118AB9 /* Build configuration list for PBXNativeTarget "Healder" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				219E09192FBD7FC100118AB9 /* Debug */,
@@ -332,6 +663,118 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AgoraIO/AgoraRtcEngine_iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.6.2;
+			};
+		};
+		BC0000012FD040840000D46F /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A142BD012FD040840000D46F /* AIAEC */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = AIAEC;
+		};
+		A142BD032FD040840000D46F /* AIAECLL */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = AIAECLL;
+		};
+		A142BD052FD040840000D46F /* AINS */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = AINS;
+		};
+		A142BD072FD040840000D46F /* AINSLL */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = AINSLL;
+		};
+		A142BD092FD040840000D46F /* AudioBeauty */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = AudioBeauty;
+		};
+		A142BD0B2FD040840000D46F /* ClearVision */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = ClearVision;
+		};
+		A142BD0D2FD040840000D46F /* ContentInspect */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = ContentInspect;
+		};
+		A142BD0F2FD040840000D46F /* FaceCapture */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = FaceCapture;
+		};
+		A142BD112FD040840000D46F /* FaceDetection */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = FaceDetection;
+		};
+		A142BD132FD040840000D46F /* LipSync */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = LipSync;
+		};
+		A142BD152FD040840000D46F /* ReplayKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = ReplayKit;
+		};
+		A142BD172FD040840000D46F /* RtcBasic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = RtcBasic;
+		};
+		A142BD192FD040840000D46F /* SpatialAudio */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = SpatialAudio;
+		};
+		A142BD1B2FD040840000D46F /* VQA */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = VQA;
+		};
+		A142BD1D2FD040840000D46F /* VideoAv1CodecEnc */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = VideoAv1CodecEnc;
+		};
+		A142BD1F2FD040840000D46F /* VideoCodecEnc */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = VideoCodecEnc;
+		};
+		A142BD212FD040840000D46F /* VirtualBackground */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A142BD002FD040840000D46F /* XCRemoteSwiftPackageReference "AgoraRtcEngine_iOS" */;
+			productName = VirtualBackground;
+		};
+		BC0000022FD040840000D46F /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BC0000012FD040840000D46F /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 219E09052FBD7FC000118AB9 /* Project object */;
 }

@@ -1,0 +1,3 @@
+"NSMicrophoneUsageDescription" = "HeartH needs microphone access for emergency video calls.";
+"NSCameraUsageDescription" = "HeartH needs camera access for emergency video calls.";
+"NSPhotoLibraryUsageDescription" = "HeartH needs photo library access for reminder photos.";

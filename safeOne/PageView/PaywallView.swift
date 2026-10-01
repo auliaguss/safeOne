@@ -1,0 +1,421 @@
+//
+//  PaywallView.swift
+//  safeOne
+//
+
+import SwiftUI
+
+struct PaywallView: View {
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var subscription = SubscriptionManager.shared
+
+    @State private var selectedPlan: PremiumPlan = .yearly
+    @State private var isPurchasing = false
+    @State private var showPrivacy = false
+    @State private var resultAlert: PaywallAlert? = nil
+
+    private static let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            AppSurfaceBackground()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+                        .padding(.top, 28)
+
+                    sectionTitle(appState.text("Yang Kamu Dapatkan", "What’s Included"))
+                        .padding(.top, 20)
+
+                    featureCard
+                        .padding(.top, 12)
+                        .padding(.horizontal, -8)
+
+                    sectionTitle(appState.text("Pilih paketmu", "Choose your plan"))
+                        .padding(.top, 22)
+
+                    HStack(spacing: 16) {
+                        ForEach(PremiumPlan.allCases) { plan in
+                            PlanCard(plan: plan, isSelected: selectedPlan == plan)
+                                .onTapGesture {
+                                    withAnimation(.easeInOut(duration: 0.15)) { selectedPlan = plan }
+                                }
+                        }
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 12)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 24)
+            }
+            .scrollIndicators(.hidden)
+            .safeAreaInset(edge: .bottom) { footer }
+
+            closeButton
+                .padding(.trailing, 20)
+                .padding(.top, 8)
+        }
+        .disabled(isPurchasing)
+        .task { await subscription.loadOfferings() }
+        .alert(item: $resultAlert) { alert in
+            Alert(
+                title: Text(alert.title),
+                message: Text(alert.message),
+                dismissButton: .default(Text("OK")) {
+                    if alert.dismissesPaywall { dismiss() }
+                }
+            )
+        }
+        .sheet(isPresented: $showPrivacy) {
+            NavigationStack { DataPrivacyView() }
+                .environmentObject(appState)
+        }
+    }
+
+    // MARK: - Actions
+
+    private func purchase() async {
+        isPurchasing = true
+        defer { isPurchasing = false }
+        do {
+            if try await subscription.purchase(selectedPlan) {
+                dismiss()
+            }
+        } catch SubscriptionError.planUnavailable {
+            resultAlert = PaywallAlert(
+                title: appState.text("Paket belum tersedia", "Plan not available yet"),
+                message: appState.text("Paket langganan belum tersedia saat ini.", "The subscription plan is not available right now.")
+            )
+        } catch {
+            resultAlert = PaywallAlert(
+                title: appState.text("Pembelian gagal", "Purchase failed"),
+                message: error.localizedDescription
+            )
+        }
+    }
+
+    private func restore() async {
+        isPurchasing = true
+        defer { isPurchasing = false }
+        do {
+            if try await subscription.restore() {
+                resultAlert = PaywallAlert(
+                    title: appState.text("Pro dipulihkan", "Pro restored"),
+                    message: appState.text("Langganan Pro kamu aktif lagi.", "Your Pro subscription is active again."),
+                    dismissesPaywall: true
+                )
+            } else {
+                resultAlert = PaywallAlert(
+                    title: appState.text("Tidak ada pembelian", "No purchases found"),
+                    message: appState.text("Tidak ada langganan aktif di Apple ID ini.", "There's no active subscription on this Apple ID.")
+                )
+            }
+        } catch {
+            resultAlert = PaywallAlert(
+                title: appState.text("Gagal memulihkan", "Restore failed"),
+                message: error.localizedDescription
+            )
+        }
+    }
+
+    // MARK: - Sections
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(appState.text("Buka fitur ini\ndengan Pro", "Unlock this feature\nwith Pro"))
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.black)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(appState.text(
+                "Upgrade untuk mengelola perawatan harian dengan lebih mudah dan dapat bantuan saat keluargamu membutuhkannya.",
+                "Upgrade to manage daily care more easily and get help when your family needs it."
+            ))
+            .font(.system(size: 15))
+            .foregroundColor(Color(hex: "6C6C70"))
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func sectionTitle(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 16))
+            .foregroundColor(Color(hex: "8E8E93"))
+    }
+
+    private var featureCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            PaywallFeatureRow(
+                icon: "call",
+                title: appState.text("Panggilan Darurat", "Emergency Call"),
+                subtitle: appState.text("Hubungi pendamping dengan cepat saat butuh bantuan.", "Quickly contact a caregiver when help is needed.")
+            )
+            PaywallFeatureRow(
+                icon: "clock",
+                title: appState.text("Pengingat tanpa batas", "Unlimited reminders"),
+                subtitle: appState.text("Buat pengingat sebanyak yang kamu butuhkan.", "Create as many reminders as you need.")
+            )
+            PaywallFeatureRow(
+                icon: "multipleElder",
+                title: appState.text("Rawat beberapa lansia", "Care for multiple elders"),
+                subtitle: appState.text("Kelola perawatan untuk beberapa anggota keluarga.", "Manage care for multiple family members.")
+            )
+            PaywallFeatureRow(
+                icon: "multipleFamily",
+                title: appState.text("Tetap terhubung sebagai keluarga", "Stay connected as a family"),
+                subtitle: appState.text(
+                    "Hubungkan hingga \(AppConfig.premiumCaregiverLimit) pendamping.",
+                    "Connect up to \(AppConfig.premiumCaregiverLimit) caregivers."
+                )
+            )
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.white.opacity(0.72))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white, lineWidth: 1.5)
+        )
+    }
+
+    private var footer: some View {
+        VStack(spacing: 10) {
+            Button {
+                Task { await purchase() }
+            } label: {
+                ZStack {
+                    if isPurchasing {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text(appState.text("Buka dengan Pro", "Unlock with Pro"))
+                            .font(.system(size: 18, weight: .medium))
+                    }
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(Capsule().fill(Color.black))
+            }
+            .padding(.horizontal, 16)
+
+            Text(appState.text(
+                "Langganan diperpanjang otomatis. Batalkan kapan saja.",
+                "Subscription renews automatically. Cancel anytime."
+            ))
+            .font(.system(size: 12))
+            .foregroundColor(Color(hex: "8E8E93"))
+
+            // Required by App Review for auto-renewable subscriptions.
+            HStack(spacing: 6) {
+                Button(appState.text("Pulihkan Pembelian", "Restore Purchases")) {
+                    Task { await restore() }
+                }
+                Text("·")
+                Link(appState.text("Ketentuan", "Terms of Use"), destination: Self.termsURL)
+                Text("·")
+                Button(appState.text("Privasi", "Privacy Policy")) { showPrivacy = true }
+            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(Color(hex: "6C6C70"))
+            .tint(Color(hex: "6C6C70"))
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+    }
+
+    private var closeButton: some View {
+        Button { dismiss() } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(.black)
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(Color.white))
+                .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
+        }
+        .accessibilityLabel(appState.text("Tutup", "Close"))
+    }
+}
+
+private struct PaywallAlert: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+    var dismissesPaywall = false
+}
+
+// MARK: - Feature Row
+
+private struct PaywallFeatureRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            // Asset already includes the tile background.
+            Image(icon)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(.black)
+                Text(subtitle)
+                    .font(.system(size: 14))
+                    .foregroundColor(Color(hex: "8E8E93"))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.top, 2)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Plan Card
+
+private struct PlanCard: View {
+    @EnvironmentObject var appState: AppState
+    let plan: PremiumPlan
+    let isSelected: Bool
+
+    private var name: String {
+        switch plan {
+        case .monthly: return appState.text("Bulanan", "Monthly")
+        case .yearly: return appState.text("Tahunan", "Yearly")
+        }
+    }
+
+    private var period: String {
+        switch plan {
+        case .monthly: return appState.text("/ bulan", "/ month")
+        case .yearly: return appState.text("/ tahun", "/ year")
+        }
+    }
+
+    @ObservedObject private var subscription = SubscriptionManager.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(name)
+                .font(.system(size: 16))
+                .foregroundColor(.black)
+                .padding(.bottom, 4)
+
+            if plan == .yearly, let fullPrice = subscription.fullYearPrice() {
+                Text(fullPrice)
+                    .font(.system(size: 12))
+                    .strikethrough()
+                    .foregroundColor(Color(hex: "8E8E93"))
+            }
+
+            Text(subscription.price(for: plan))
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundColor(.black)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+
+            Text(period)
+                .font(.system(size: 12))
+                .foregroundColor(Color(hex: "3A3A3C"))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(isSelected ? Color.black : Color(hex: "D1D1D6"), lineWidth: isSelected ? 2 : 1)
+        )
+        .overlay(alignment: .topTrailing) {
+            if plan == .yearly, let savings = subscription.yearlySavings() {
+                Text(appState.text("HEMAT \(savings)", "SAVE \(savings)"))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(Color(hex: "3D8EF0")))
+                    .offset(x: -12, y: -12)
+            }
+        }
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
+// MARK: - Premium Profile Section
+
+/// Premium status + upgrade entry point, shared by both profile screens.
+struct PremiumSection: View {
+    @EnvironmentObject var appState: AppState
+    @ObservedObject private var subscription = SubscriptionManager.shared
+    @State private var showPaywall = false
+
+    var body: some View {
+        Section {
+            HStack {
+                Label(appState.text("Status", "Status"), systemImage: "crown")
+                Spacer()
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(subscription.isSubscribed ? "Pro" : appState.text("Gratis", "Free"))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(subscription.isSubscribed ? Color.blue : Color.secondary)
+
+                    if let expiry = subscription.expiredPro {
+                        Text(appState.text(
+                            subscription.isSubscribed ? "Aktif sampai" : "Berakhir pada",
+                            subscription.isSubscribed ? "Active until" : "Expired on"
+                        ))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                        Text(expiry.formatted(.dateTime.day().month(.abbreviated).year().hour().minute()))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(appState.text("Status langganan", "Subscription status"))
+            .accessibilityValue(subscriptionStatusAccessibilityValue)
+            .fullScreenCover(isPresented: $showPaywall) {
+                PaywallView()
+                    .environmentObject(appState)
+            }
+
+            if !subscription.isSubscribed {
+                Button {
+                    showPaywall = true
+                } label: {
+                    Label(appState.text("Upgrade ke Pro", "Upgrade to Pro"), systemImage: "sparkles")
+                }
+            }
+        } header: {
+            Text("Pro")
+        }
+    }
+
+    private var subscriptionStatusAccessibilityValue: String {
+        let status = subscription.isSubscribed ? "Pro" : appState.text("Gratis", "Free")
+        guard let expiry = subscription.expiredPro else { return status }
+        return "\(status), \(expiry.formatted(.dateTime.day().month().year().hour().minute()))"
+    }
+}
+
+#Preview {
+    PaywallView()
+        .environmentObject(AppState())
+}
