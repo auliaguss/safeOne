@@ -369,11 +369,28 @@ struct PremiumSection: View {
             HStack {
                 Label(appState.text("Status", "Status"), systemImage: "crown")
                 Spacer()
-                Text(subscription.isSubscribed ? "Pro" : appState.text("Gratis", "Free"))
-                    .fontWeight(.semibold)
-                    .foregroundStyle(subscription.isSubscribed ? Color.blue : Color.secondary)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(subscription.isSubscribed ? "Pro" : appState.text("Gratis", "Free"))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(subscription.isSubscribed ? Color.blue : Color.secondary)
+
+                    if let expiry = subscription.expiredPro {
+                        Text(appState.text(
+                            subscription.isSubscribed ? "Aktif sampai" : "Berakhir pada",
+                            subscription.isSubscribed ? "Active until" : "Expired on"
+                        ))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                        Text(expiry.formatted(.dateTime.day().month(.abbreviated).year().hour().minute()))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
             .accessibilityElement(children: .combine)
+            .accessibilityLabel(appState.text("Status langganan", "Subscription status"))
+            .accessibilityValue(subscriptionStatusAccessibilityValue)
             .fullScreenCover(isPresented: $showPaywall) {
                 PaywallView()
                     .environmentObject(appState)
@@ -389,6 +406,12 @@ struct PremiumSection: View {
         } header: {
             Text("Pro")
         }
+    }
+
+    private var subscriptionStatusAccessibilityValue: String {
+        let status = subscription.isSubscribed ? "Pro" : appState.text("Gratis", "Free")
+        guard let expiry = subscription.expiredPro else { return status }
+        return "\(status), \(expiry.formatted(.dateTime.day().month().year().hour().minute()))"
     }
 }
 
