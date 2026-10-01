@@ -8,12 +8,12 @@ import Combine
 import RevenueCat
 
 /// Single source of premium state for the app.
-/// Premium = an active RevenueCat "premium" entitlement OR a locally redeemed code.
+/// Premium = an active RevenueCat "healder_pro" entitlement OR a locally redeemed code.
 /// The local redeem path is temporary until the backend validates codes.
 final class SubscriptionManager: ObservableObject {
     static let shared = SubscriptionManager()
 
-    static let entitlementID = "premium"
+    static let entitlementID = "healder_pro"
 
     /// Reusable promo codes — any account can redeem them.
     /// Move to the backend before release: anything in the binary can be extracted.

@@ -110,8 +110,8 @@ struct PaywallView: View {
         do {
             if try await subscription.restore() {
                 resultAlert = PaywallAlert(
-                    title: appState.text("Premium dipulihkan", "Premium restored"),
-                    message: appState.text("Langganan Premium kamu aktif lagi.", "Your Premium subscription is active again."),
+                    title: appState.text("Pro dipulihkan", "Pro restored"),
+                    message: appState.text("Langganan Pro kamu aktif lagi.", "Your Pro subscription is active again."),
                     dismissesPaywall: true
                 )
             } else {
@@ -132,7 +132,7 @@ struct PaywallView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(appState.text("Buka fitur ini\ndengan Premium", "Unlock this feature\nwith Premium"))
+            Text(appState.text("Buka fitur ini\ndengan Pro", "Unlock this feature\nwith Pro"))
                 .font(.system(size: 28, weight: .bold))
                 .foregroundColor(.black)
                 .fixedSize(horizontal: false, vertical: true)
@@ -200,7 +200,7 @@ struct PaywallView: View {
                     if isPurchasing {
                         ProgressView().tint(.white)
                     } else {
-                        Text(appState.text("Buka dengan Premium", "Unlock with Premium"))
+                        Text(appState.text("Buka dengan Pro", "Unlock with Pro"))
                             .font(.system(size: 18, weight: .medium))
                     }
                 }
@@ -391,10 +391,10 @@ private struct RedeemCodeAlert: ViewModifier {
             } message: {
                 Text(errorMessage ?? message)
             }
-            .alert(appState.text("Premium aktif", "Premium unlocked"), isPresented: $showSuccess) {
+            .alert(appState.text("Pro aktif", "Pro unlocked"), isPresented: $showSuccess) {
                 Button(appState.text("Mantap", "Great"), role: .cancel) { onRedeemed() }
             } message: {
-                Text(appState.text("Semua fitur Premium sekarang tersedia di akun ini.", "All Premium features are now available on this account."))
+                Text(appState.text("Semua fitur Pro sekarang tersedia di akun ini.", "All Pro features are now available on this account."))
             }
     }
 
@@ -437,7 +437,7 @@ struct PremiumSection: View {
             HStack {
                 Label(appState.text("Status", "Status"), systemImage: "crown")
                 Spacer()
-                Text(subscription.isSubscribed ? "Premium" : appState.text("Gratis", "Free"))
+                Text(subscription.isSubscribed ? "Pro" : appState.text("Gratis", "Free"))
                     .fontWeight(.semibold)
                     .foregroundStyle(subscription.isSubscribed ? Color.blue : Color.secondary)
             }
@@ -445,7 +445,7 @@ struct PremiumSection: View {
             .redeemCodeAlert(
                 isPresented: $showRedeem,
                 title: appState.text("Redeem Kode", "Redeem Code"),
-                message: appState.text("Masukkan kode untuk membuka Premium.", "Enter your code to unlock Premium.")
+                message: appState.text("Masukkan kode untuk membuka Pro.", "Enter your code to unlock Pro.")
             )
             .fullScreenCover(isPresented: $showPaywall) {
                 PaywallView()
@@ -456,7 +456,7 @@ struct PremiumSection: View {
                 Button {
                     showPaywall = true
                 } label: {
-                    Label(appState.text("Upgrade ke Premium", "Upgrade to Premium"), systemImage: "sparkles")
+                    Label(appState.text("Upgrade ke Pro", "Upgrade to Pro"), systemImage: "sparkles")
                 }
                 Button {
                     showRedeem = true
@@ -465,7 +465,7 @@ struct PremiumSection: View {
                 }
             }
         } header: {
-            Text("Premium")
+            Text("Pro")
         }
     }
 }

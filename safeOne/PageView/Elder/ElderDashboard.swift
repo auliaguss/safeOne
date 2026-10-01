@@ -136,8 +136,8 @@ struct ElderDashboard: View {
                     "Maximum 1 minute per session and 3 calls per day."
                 )
                 : appState.text(
-                    "Panggilan darurat membutuhkan Premium.",
-                    "Emergency calls require Premium."
+                    "Panggilan darurat membutuhkan Pro.",
+                    "Emergency calls require Pro."
                 ))
             .padding(.trailing, 24)
             .padding(.bottom, 20)
