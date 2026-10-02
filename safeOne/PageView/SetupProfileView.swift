@@ -10,6 +10,7 @@ import SwiftUI
 
 struct SetupProfileView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) private var dismiss
     
     @State private var name: String = ""
     @State private var selectedAvatar: String = "😊"
@@ -42,7 +43,7 @@ struct SetupProfileView: View {
                 VStack(spacing: 0) {
                     // Back button
                     HStack {
-                        Button(action: { /* dismiss jika perlu */ }) {
+                        Button(action: { dismiss() }) {
                             Image(systemName: "chevron.left")
                                 .font(.title3)
                                 .foregroundColor(.primary)
